@@ -1,0 +1,330 @@
+# Validator Report — 2026-09-15 (Report #1)
+
+**Scope audited:** `research/01-VERIFIED-FACTS.md` (F1–F8) + all 27 files under
+`research/sources/`, at ideator commit `fd1ebfb`.
+
+**Method:** every F-entry was checked line-by-line against the vendored source the
+entry cites. `www.elastic.co` is egress-blocked in my session, so the vendored
+`research/sources/` tree *was* my primary source. That is only sound because the
+ideator vendored doc **source** repos rather than rendered pages — good call, it is
+what made this audit possible at all.
+
+**Headline:** the factual ledger is unusually strong. **F1, F3, F4, F6, F7, F8 verify
+verbatim.** F4 in particular is a genuine save. The problems are not in the facts —
+they are in **what the ledger concludes from them (A1)** and **what it does not cover
+at all (A2–A4)**.
+
+---
+
+## Anomalies found (ranked by severity)
+
+### 🔴 A1 — COMPLIANCE: "compliance satisfied by construction" is NOT established
+**Where:** `01-VERIFIED-FACTS.md` F6, "Why this matters strategically".
+
+The ledger states:
+
+> "Elastic is then load-bearing for reasoning orchestration, not just storage — and
+> the compliance boundary (Elastic + AWS only) is satisfied by construction."
+
+**Why it matters:** the compliance rule PROBE is being held to is that reasoning lives
+inside **Elastic Agent Builder + Workflows**. ES|QL `COMPLETION` is neither. It is a
+query-language command executed by Elasticsearch. "Inside Elastic the product" and
+"inside Agent Builder + Workflows the named surfaces" are different claims, and F6
+silently substitutes the first for the second. The ledger contains **zero** facts about
+Agent Builder or Workflows — nothing vendored, no F-entry, not mentioned anywhere.
+
+So the single sentence in the ledger that asserts compliance is the one sentence with
+no source behind it. It is also stated flatly, with **no honesty tag** — it is neither
+`[DOCUMENTED]` nor `[REASONING]`, in a document whose whole discipline is that every
+claim carries a tag.
+
+If a judge reads the rule strictly, an architecture whose reasoning step is
+`| COMPLETION ...` can be ruled non-compliant, and that is a disqualification-class
+risk, not a points deduction.
+
+**Suggested fix (do this before any more idea generation):**
+1. Retag the sentence `[REASONING]` at minimum, or delete it.
+2. Vendor primary sources on Agent Builder and Workflows and open an F9.
+3. Decide explicitly, and write down, one of:
+   - **(a)** Agent Builder/Workflows is the orchestrator and calls ES|QL (incl.
+     `COMPLETION`) as a tool — compliant, and probably what you want; or
+   - **(b)** ES|QL `COMPLETION` *is* the reasoning step — then you must argue the rule
+     is satisfied, and that argument needs to be on the slide, not assumed.
+   Until this is decided, **every downstream design is resting on an unaudited
+   assumption.**
+
+### 🟠 A2 — COVERAGE GAP: AgentCore entirely absent
+**Where:** whole ledger. F7 covers Bedrock **only** as an Elastic inference endpoint
+(`inference.put_amazonbedrock`). Bedrock **AgentCore** — named in PROBE's own scope —
+has no fact, no source, no mention. An inference endpoint is not an agent runtime.
+**Fix:** either vendor AgentCore sources and open an F-entry, or state on the record
+that PROBE does not use AgentCore, so the omission is a decision rather than a hole.
+
+### 🟠 A3 — COVERAGE GAP: flagd self-grading unaddressed despite vendored evidence
+**Where:** `sources/otel/demo.flagd.json` is vendored but **no F-entry cites it**.
+Self-grading via flagd is core PROBE scope — it is the thing that makes the demo
+falsifiable on stage — and the ledger says nothing about it.
+
+I extracted the ground truth so it is not lost. **15 flags**, all defaulting `off`:
+
+| Flag | Variants |
+|---|---|
+| `adFailure`, `adHighCpu`, `adManualGc` | `on` / `off` |
+| `failedReadinessProbe`, `kafkaQueueProblems` | `on` / `off` |
+| `loadGeneratorFloodHomepage`, `paymentUnreachable` | `on` / `off` |
+| `productCatalogFailure`, `productCatalogLockContention` | `on` / `off` |
+| `recommendationCacheFailure` | `on` / `off` |
+| `cartFailure`, `paymentFailure` | `off`, `10%`, `25%`, `50%`, `75%`, `90%`, `100%` |
+| `emailMemoryLeak` | `off`, `1x`, `10x`, `100x`, `1000x`, `10000x` |
+| `imageSlowLoad`, `intlShippingSlowdown` | `off`, `5sec`, `10sec` |
+
+**Why it matters (and this is an opportunity, not just a gap):** the graded variants
+are the good ones. `cartFailure` at `10%` vs `100%`, or `emailMemoryLeak` at `10x` vs
+`1000x`, let you demonstrate *sensitivity* — PROBE catching the subtle one is a far
+stronger claim than catching a service that is 100% down. The binary flags are the
+easy demo; the percentage flags are the one that wins the rubric.
+**Fix:** open F9/F10 on flagd, and pick the grading flag deliberately.
+
+### 🟠 A4 — SCOPE GAP: remediation is missing
+**Where:** whole ledger. PROBE's scope is detection → reasoning → **remediation**. F1–F8
+cover detection (F1, F3, F4) and reasoning (F6, F7) and presentation (F8). Nothing
+covers acting on the conclusion. **Fix:** an F-entry on the remediation path, whatever
+it is (Workflows action, flagd flip-back, ticket). Note the repo's existing Jira code
+is *not* it — see A11.
+
+### 🟡 A5 — SOURCING INTEGRITY: `infer_bedrock.md` is a mis-vendored file
+**Where:** `sources/elastic/infer_bedrock.md`. Filename promises Bedrock inference docs.
+Actual content is the ES|QL **`LIMIT`** command page (`navigation_title: "LIMIT"`).
+F7's substance is unharmed — it cites `bedrock_req.ts` / `bedrock_types.ts`, which are
+correctly vendored and which I verified — but this file is dead weight that *looks*
+like evidence. Anyone spot-checking sources will open it and lose confidence in the
+whole tree. **Fix:** delete it or re-fetch the intended page.
+
+### 🟡 A6 — UNCITED FACT: F2's version numbers have no vendored source
+**Where:** F2. Claims `elasticsearch = 9.6.0`, `lucene = 10.5.1` from
+`build-tools-internal/version.properties` — **that file is not in `sources/`.** It is
+the only F-entry I could not verify. It is *indirectly* corroborated (the vendored docs
+reference `stack: ga 9.6` and `preview 9.6+`), so I believe it, but it is asserted
+`[DOCUMENTED]` on evidence that is not present.
+**Why it matters:** F1's whole version-gating argument ("released GA is ~9.5.x", so
+`BY` is available but multi-changepoint is not) hangs off F2. **Fix:** vendor the file.
+
+### 🟡 A7 — TRUNCATED QUOTE presented as verbatim
+**Where:** F5. The `LOOKUP JOIN` limitation is quoted accurately — I matched it word for
+word — but the quote **stops one sentence early**. The source ends:
+
+> "... and coordinator-side `ENRICH`. **Use the [`_coordinator:` prefix](#coordinator-mode)
+> to avoid this restriction.**"
+
+The omitted sentence names the official escape hatch. Dropping it makes the constraint
+look harder than it is. **Fix:** restore the sentence — and then read A10, because the
+escape hatch has its own problem.
+
+### 🟡 A8 — "verbatim" list that is actually abbreviated
+**Where:** F7, `provider` supported values, labelled "(verbatim)". The real list gives
+task types per provider; the ledger compresses `ai21labs`, `meta`, `mistral` into a bare
+list and drops their task types (all three are `chat_completion` + `completion`).
+Harmless today, wrong label. **Fix:** drop the word "verbatim" or paste the full list.
+
+### 🟡 A9 — OVERCLAIM: "sending both is a config error"
+**Where:** F7, demo-killer #3. Source says `temperature` "should not be used if `top_p`
+or `top_k` is specified" — a recommendation. The ledger escalates this to "sending both
+**is a config error**", i.e. asserts a rejection behavior the spec does not state.
+The *advice* (use `temperature: 0` alone for a reproducible demo) is right; the
+justification is invented. **Fix:** retag `[UNTESTED]` and soften to "should not be
+combined".
+
+### 🟡 A10 — INCOMPLETE RISK REGISTER: D0-5 has no fallback on the target version
+**Where:** F5 + F2 interaction. The ledger correctly flags its single-cluster reading of
+`LOOKUP JOIN`-after-`CHANGE_POINT` as `[REASONING]` and as "highest demo risk" (D0-5) —
+that is exactly right and I credit it. But it stops there. The documented mitigation
+(`_coordinator:` prefix, A7) is **`stack: preview 9.6+`**, and by F2's own reasoning 9.6
+is *unreleased*. **So on the 9.5 design target, if D0-5 fails there is no documented
+fallback at all.** A risk flagged without a fallback is half a risk assessment.
+**Fix:** define the plan-B query shape now — most likely materialize the
+`CHANGE_POINT` output and join in a second query, or pre-join the service graph before
+`STATS`. Decide it before cluster time, not during it.
+
+### 🟡 A11 — INTERNAL CONTRADICTION at repo level: two different products
+**Where:** `README.md` + `docs/RESEARCH.md` + `docs/ARCHITECTURE.md` + all of `backend/`
+describe **"Probe: configure Elasticsearch's Jira integrations from one UI"** — a Jira
+connector-configuration tool, with its own 58-test suite. `research/` describes a
+microservice incident-detection agent on Astronomy Shop. **These are unrelated
+products sharing a repo and a name**, and nothing in either reconciles them.
+**Why it matters:** a judge who opens the repo lands on the Jira README first. Right now
+the repo's front door advertises the wrong project.
+**Fix:** decide whether the Jira work is (a) dead prior art to be archived/removed, (b)
+the remediation path for A4 (plausible — it *can* file a ticket), or (c) a separate
+project. Then make `README.md` say so.
+
+### ✅ Checks that came back clean — stated so they are not re-litigated
+- **No invented functions.** Every command named (`CHANGE_POINT`, `LOOKUP JOIN`,
+  `COMPLETION`, `FORK`, `TS`, `RERANK`, `SAMPLE`, `ENRICH`, `STATS`) exists in the
+  vendored Elastic sources with the stated availability. **Nothing fabricated.**
+- **No competitive overclaims.** Datadog is not mentioned; no vendor comparison appears
+  anywhere in the ledger. Nothing to cut.
+- **No untested-as-proven on the core facts.** `[UNTESTED]` is applied where it belongs
+  (short-form `service.name` resolution; D0-1…D0-6 are all correctly flagged as needing
+  the live cluster). A1 and A9 are the only two places where an unproven thing is
+  asserted flatly.
+- **F1 arithmetic is correct.** 10 min @ 5 s = 120 buckets (≥22 ✓); 30 s buckets = 20
+  (<22, silently fails ✓).
+- **F5's doc-contradiction catch is real.** `lookup_join.md` advertises `>=`/`<=` join
+  predicates as `stack: preview 9.2`, while the landing page's Limitations says
+  "only matching on equality is supported". I confirmed both. That is Elastic's
+  contradiction, correctly caught, and the equality-only design decision is the right
+  conservative call.
+
+---
+
+## Idea ratings
+
+Scores 1–10. **Nov**=Novelty, **Feas**=Technical feasibility on Elastic+AWS in days,
+**Demo**=live-on-stage demo-ability, **Expl**=a beginner explaining it to an Elastic
+judge in 90s, **Judge**=rubric movement (Elasticsearch depth, AI implementation, impact).
+
+| # | Idea | Nov | Feas | Demo | Expl | Judge | Verdict |
+|---|---|---|---|---|---|---|---|
+| I4 | `FORK` runs PROBE and a threshold baseline over identical input in one query | 8 | 8 | 9 | 8 | 8 | **VALIDATED** |
+| I1 | `CHANGE_POINT` for detection, `pvalue` as the severity ranking key | 4 | 7 | 8 | 9 | 8 | **VALIDATED** (conditions) |
+| I5 | EDOT OTel-native field contract (`duration` nanos, `kind` = `"Server"`) | 1 | 9 | 3 | 6 | 5 | **VALIDATED** (foundation) |
+| I2 | `LOOKUP JOIN` onto a service-graph lookup index for causal ranking | 7 | 5 | 8 | 7 | 9 | **NEEDS-WORK** |
+| I3 | Reasoning via ES\|QL `COMPLETION` backed by Bedrock/Anthropic | 6 | 7 | 8 | 8 | 7 | **NEEDS-WORK** |
+
+### I4 — `FORK` head-to-head baseline *(F8)*
+One query, two branches, same input rows, `_fork` discriminator separating them.
+- **Keep:** it makes the comparison *structurally* fair rather than asking the audience
+  to trust that two separate queries saw the same data. That is a rare thing — an
+  evaluation artifact that is self-evidently honest. Best idea in the ledger.
+- **Cut:** it proves PROBE beats a strawman. A static threshold is the weakest possible
+  baseline; a judge may say so. Pick the baseline honestly and name it on the slide.
+- **Verdict: VALIDATED.** Buildable, verified GA at 9.4+, 8-branch limit is not binding.
+
+### I1 — `CHANGE_POINT` detection, `pvalue` as severity *(F1)*
+- **Keep:** `pvalue` is a *principled* severity score that ships with the command — no
+  hand-rolled scoring heuristic to defend under questioning. Explainability 9.
+- **Cut:** using a built-in command is not novel. Novelty 4 is the honest number and the
+  pitch should not lean here; lean on I4 and I2 instead.
+- **Verdict: VALIDATED, conditional on D0-1 (platinum trial active) and D0-2 (stack ≥9.5
+  for `BY`).** Without `BY` this is one query per service and the demo shape changes —
+  confirm the version **before** building on it.
+
+### I5 — EDOT field contract *(F3, F4)*
+- **Keep:** F4 prevents a silent zero-rows stage failure. `kind == "SPAN_KIND_SERVER"`
+  returns **zero rows with no error** against EDOT otel-native data. I verified all
+  three encodings in the vendored Go source — `"Server"` (otel-native),
+  `"SPAN_KIND_SERVER"` (non-OTel), `"SERVER"` (ECS). This catch alone justifies the
+  research effort. Same for `duration` being **nanoseconds**, not `transaction.duration.us`
+  (I grepped: `transaction` appears **nowhere** in the vendored Elastic mappings).
+- **Cut:** nothing. It is not a pitch item, it is hygiene — do not spend stage time on it.
+- **Verdict: VALIDATED.**
+
+### I2 — `LOOKUP JOIN` service-graph causal ranking *(F5)*
+- **Keep:** this is what turns "service X spiked" into "service X spiked **because of** Y" —
+  the difference between a dashboard and an agent. Highest judge-appeal in the ledger (9).
+- **Cut:** the pivot it depends on — `STATS | CHANGE_POINT | LOOKUP JOIN` in one pipeline —
+  is **unproven** (correctly tagged D0-5), and per A10 **has no documented fallback on
+  9.5**. If it fails on cluster, the centrepiece of the demo fails with it.
+- **Verdict: NEEDS-WORK.** Fixable, and probably fine — the limitation really is scoped to
+  cross-cluster. But: **(1)** prove the exact pipeline shape on the cluster **first**,
+  before anything is built on it; **(2)** write the plan-B shape now (A10);
+  **(3)** keep the equality-only join decision.
+
+### I3 — In-query reasoning via `COMPLETION` + Bedrock *(F6, F7)*
+- **Keep:** genuinely elegant — reasoning runs where the data is, one Bedrock call per
+  incident, cost bounded by construction because you reach `COMPLETION` with one row.
+  The `max_new_tokens: 64` catch (F7) is excellent and would have truncated the verdict
+  mid-sentence on stage.
+- **Cut:** **A1.** Its stated compliance justification does not hold up, and compliance is
+  pass/fail, not points. Until A1 is resolved this idea carries disqualification risk
+  that none of the others do.
+- **Verdict: NEEDS-WORK — blocked on A1, not on anything technical.** The technical facts
+  behind it (F6, F7) verified cleanly; it is the architectural placement that is unsettled.
+
+---
+
+## Validated ideas (safe to build on)
+
+1. **I4 — `FORK` baseline.** Build it. Strongest stage artifact you have.
+2. **I1 — `CHANGE_POINT` + `pvalue`.** Build it, **after** confirming D0-1 and D0-2.
+3. **I5 — EDOT field contract.** Already correct. Use `resource.attributes.service.name`
+   (full path), `duration` in nanos, `kind == "Server"`. Do not re-derive these.
+4. **Supporting facts F3, F6, F7, F8** verified verbatim and are safe to quote —
+   subject to the labelling fixes in A8/A9.
+
+## Rejected ideas (and why)
+
+**None outright rejected.** No idea in this ledger is off-scope or unfixable, and I am
+not manufacturing a rejection to look rigorous. The two NEEDS-WORK items (I2, I3) are
+both fixable, and their fixes are named above.
+
+The nearest thing to a rejection is **A1's implied architecture** — "ES|QL `COMPLETION`
+*is* the reasoning layer, therefore compliant". That specific *justification* should be
+rejected as written. The underlying technique survives if it is placed **under** Agent
+Builder/Workflows rather than **instead of** it.
+
+---
+
+## MESSAGES TO RESEARCH AGENT
+
+Ordered. 1–3 are blocking; do them before generating new ideas.
+
+1. **STOP claiming compliance is satisfied until you have sourced Agent Builder +
+   Workflows.** Delete or retag the F6 sentence "the compliance boundary (Elastic + AWS
+   only) is satisfied by construction". It is the only untagged conclusion in an
+   otherwise rigorously tagged document, and it is the one that can disqualify PROBE.
+   Then vendor Agent Builder and Workflows sources and open **F9**, and state plainly
+   whether reasoning sits *inside* those surfaces or merely inside Elasticsearch.
+2. **Verify the D0-5 pipeline shape before building anything on I2**, and **write the
+   plan-B query shape now**. `_coordinator:` is `preview 9.6+` and 9.6 is unreleased by
+   your own F2 — so on 9.5 you currently have **no fallback**. Fix the risk register.
+3. **Vendor `build-tools-internal/version.properties`.** F2 is your only `[DOCUMENTED]`
+   claim with no evidence in `sources/`, and F1's entire version-gating argument depends
+   on it.
+4. **Delete or replace `sources/elastic/infer_bedrock.md`** — it contains the ES|QL
+   `LIMIT` docs, not Bedrock docs. It is a filename that lies about its contents.
+5. **Restore the truncated sentence in F5's quote** ("Use the `_coordinator:` prefix to
+   avoid this restriction."). Do not present a shortened quote as verbatim.
+6. **Open an F-entry on flagd.** You vendored `demo.flagd.json` and then never cited it.
+   The 15 flags are tabulated in A3 above — reuse that table. **Prefer a graded flag
+   (`cartFailure` at 10–25%, or `emailMemoryLeak` at 10x) over a binary one**: detecting
+   a partial failure is a much stronger claim than detecting a dead service, and the
+   graded variants are what make the self-grading loop meaningful.
+7. **Cover remediation (A4) and AgentCore (A2), or declare them out of scope in writing.**
+   Right now they are simply absent, and absence reads as oversight.
+8. **Fix two labels:** F7's provider list is not "verbatim" (A8); F7's
+   `temperature`+`top_p` claim says "is a config error" where the spec says "should not
+   be used" (A9) — retag `[UNTESTED]`.
+9. **Reconcile the repo (A11).** `README.md` describes a Jira connector-config UI. A judge
+   opening this repo sees the wrong project. Decide: archive it, absorb it as the
+   remediation path, or separate it.
+10. **Keep doing the thing you are doing well.** Vendoring doc *source* repos instead of
+    rendered pages is why this audit was possible under an egress block, and the F4
+    span-kind catch is the single most valuable item in the ledger. The honesty tags are
+    working — A1 is notable precisely *because* it is the one place you dropped one.
+
+---
+
+## Open questions I could not resolve
+
+1. **Is ES|QL `COMPLETION` acceptable as "reasoning inside Agent Builder + Workflows"?**
+   A judgment call about the rules, not a technical question. I cannot resolve it from
+   sources. **This is the one to get a human ruling on — it is pass/fail, not points.**
+   (A1)
+2. **Does `STATS | CHANGE_POINT | LOOKUP JOIN` execute on a single cluster?** Needs the
+   live cluster. The docs' restriction is explicitly scoped to cross-cluster, so the
+   ideator's reading is probably right — but "probably" is not a demo. (D0-5 / A10)
+3. **Does ES|QL resolve the short form `service.name` through the `passthrough` field,
+   or is the full `resource.attributes.service.name` required?** Needs the cluster.
+   The ideator's advice to use the full path everywhere is the correct safe default. (D0-3)
+4. **What stack version is the demo cluster actually on?** Everything version-gated hangs
+   off this: `BY` needs ≥9.5, `FORK` GA needs ≥9.4, `COMPLETION` GA needs ≥9.3,
+   `_coordinator:` needs 9.6 preview. **One `GET /` on the cluster resolves D0-2 and
+   most of A10.** Cheapest high-value check available — do it first.
+5. **Is a platinum trial available on the demo cluster, and does its 30-day window cover
+   the event date?** `CHANGE_POINT` hard-requires platinum. If the trial has already been
+   consumed on that cluster, I1 — and with it the detection stage — does not run at all.
+   (D0-1)
+6. **Is the existing Jira codebase in scope?** Affects whether A4's remediation path is
+   already half-built or needs designing from scratch. (A11)
+
