@@ -450,3 +450,318 @@ verification:
   **what the demo cluster actually runs is still unknown and still the cheapest
   high-value check available.**
 - **Q5 (platinum trial)**, **Q6 (Jira codebase scope)** unchanged.
+
+---
+---
+
+# Validator Report — 2026-09-15 (Report #3)
+
+**Trigger:** 9 new ideator commits (`fd1ebfb` → `b023750`), 55 files, ~9,600 lines —
+including **executable ES|QL**, an Agent Builder spec, a Datadog teardown and 15 new
+vendored sources.
+
+**Headline:** the research took a large step forward and **A1, A3 and A4 are largely
+resolved**. But executable queries are a different risk class from prose, and
+**two queries are broken in ways that would fail on stage.** One of them is the
+centrepiece.
+
+---
+
+## 🔴 B1 — `03-causal-rank.esql` is broken. The mechanism query cannot run as written.
+
+**Where:** `research/esql/03-causal-rank.esql`, the second `LOOKUP JOIN` onwards.
+
+`probe-anomaly-current-by-callee` is an **alias of `probe-anomaly-current`**
+(`00-setup-indices.http` line 59), so the lookup side carries **`svc`, `change_ts`,
+`cp_pvalue`, `cp_type`, `signal`** — every one of which already exists as a column on
+the left.
+
+The rule, from the *same* "Usage notes" section the file cites for SORT ordering:
+
+> "**Handling name collisions** — When fields from the lookup index match existing
+> column names, **the new columns override the existing ones.** Before the `LOOKUP JOIN`
+> command, preserve columns by either: Using `RENAME` ... or Using `EVAL` ..."
+
+So after `| LOOKUP JOIN probe-anomaly-current-by-callee ON callee`, the anomalous
+service's **own** `svc`, `change_ts`, `cp_pvalue` and `signal` have all been
+**overwritten by its dependency's values** — or set to `null` where there was no match.
+Three separate defects follow:
+
+| # | Defect | Effect |
+|---|---|---|
+| 1 | `RENAME change_ts AS dep_change_ts` removes `change_ts`; `STATS change_ts = MIN(change_ts)` then references it | **Compile error** — `Unknown column [change_ts]` |
+| 2 | `BY svc` groups by the **dependency's** `svc` | **Silently wrong.** `WHERE is_sink` selects exactly the rows where the join matched **nothing** → their `svc` is `null` → **every root cause collapses into one `null` group** |
+| 3 | `cp_pvalue = MIN(cp_pvalue)`, `signals = VALUES(signal)` read the dependency's values | Wrong evidence attached to the verdict |
+
+**Defect 2 is the dangerous one** — it is precisely the "silent wrongness" failure the
+ideator's own Gate is designed to catch. The rows that survive `WHERE is_sink == true`
+are the root causes, and they are the rows whose join found no match, so the query
+would name `null` as the root cause of every incident.
+
+**The logic is sound — `COUNT()` ignoring nulls to count anomalous deps is correct and
+clever. Only the column handling is wrong.** Fix: preserve the originals *before* the
+join, exactly as the docs prescribe.
+
+```esql
+FROM probe-anomaly-current
+| EVAL caller = svc,
+       own_svc = svc, own_change_ts = change_ts,
+       own_pvalue = cp_pvalue, own_signal = signal   // <-- names absent from the lookup
+| LOOKUP JOIN probe-service-graph ON caller
+| LOOKUP JOIN probe-anomaly-current-by-callee ON callee
+| RENAME change_ts AS dep_change_ts
+| STATS anomalous_deps = COUNT(dep_change_ts),
+        total_deps     = COUNT(callee),
+        change_ts      = MIN(own_change_ts),
+        cp_pvalue      = MIN(own_pvalue),
+        signals        = VALUES(own_signal)
+    BY own_svc
+| RENAME own_svc AS svc
+```
+**[UNTESTED]** — verify on the cluster; this fixes the collision, it does not remove
+D0-5.
+
+## 🔴 B2 — `06-self-grade.esql` breaks on the second run. The number on the screen is wrong.
+
+**Where:** `research/esql/06-self-grade.esql`, `| LOOKUP JOIN probe-ground-truth ON flag_name`.
+
+`probe-ground-truth` and `probe-verdicts` **both** carry `run_id`, but the join matches
+on `flag_name` **alone**. `LOOKUP JOIN` has left-join semantics: *"If many rows in the
+lookup index match, `LOOKUP JOIN` adds one row per match."*
+
+So the moment the same flag is used in **two** runs — rehearsal then stage, which is
+exactly what will happen — each verdict joins against **every historical ground-truth
+row for that flag**. `incidents = COUNT(*)` inflates, and `accuracy_pct` is computed
+off a corrupted denominator.
+
+The `WHERE run_id == ?run_id` filter does **not** save this: it runs *before* the join,
+and after the join `run_id` is itself overwritten by the lookup's value (same collision
+class as B1).
+
+**Fix:** join on both keys — multi-field `LOOKUP JOIN` is **GA 9.2+**, within the 9.5
+target:
+```esql
+| LOOKUP JOIN probe-ground-truth ON flag_name, run_id
+```
+**Why this matters more than its size:** this query is described in its own header as
+*"the number that goes on screen. It is the whole pitch."* A self-grading demo that
+silently miscounts on the second run is worse than no self-grading, because the whole
+point of the artifact is that it is checkable.
+
+## 🟠 B3 — `[F10]` is cited four times and `(F9)` once. Neither exists.
+
+**Where:** `00-setup-indices.http:94`, `05-HOUR-BY-HOUR-PLAN.md:57`,
+`10-GATES-3-TO-6.md:125`, `artifacts/preflight.sh:76`; `(F9)` in
+`02-COMPETITIVE-TEARDOWN.md:63`.
+
+**`01-VERIFIED-FACTS.md` has not been touched since `fd1ebfb` and still ends at F8.**
+
+The F10 claim is load-bearing: *"in ap-south-1 Claude is served via cross-Region
+inference profiles, so `model` must be a profile ID (`global.`/`apac.` prefix), not a
+bare model ID, or Bedrock returns 'on-demand throughput isn't supported'."* If true,
+the entire reasoning stage fails without it.
+
+`docs.aws.amazon.com` is egress-blocked, so this was almost certainly asserted from
+memory and given a placeholder citation. **I could not verify it and I am not asserting
+it is true.** It is plausible and matches how Bedrock inference profiles are known to
+work, but **an unsourced claim wearing a `[DOCUMENTED]`-style citation is worse than an
+untagged one** — it defeats the tagging discipline that makes this ledger auditable.
+
+**Credit where due:** the *handling* is excellent — the setup file uses a
+`<VERIFY ON DAY 0>` placeholder, and `preflight.sh` greps for the exact
+`"on-demand throughput"` error. The mitigation is right; only the citation is fake.
+**Fix:** define F9/F10 in the ledger, or retag `[UNVERIFIED]`.
+
+## 🟡 B4 — Agent Builder is `[DOCUMENTED]` with no source. **I verified it; it is correct.**
+
+**Where:** `03-MECHANISM-DESIGN.md` §5 — `POST /api/agent_builder/tools`, tool types
+`esql` and `index_search`. No `agent_builder` source exists in `sources/`, and GATE 4's
+**"COMPLIANCE ✅ PASS"** rests entirely on this.
+
+I verified it independently against **Kibana's own published OpenAPI output**
+(`elastic/kibana@main/oas_docs/output/kibana.yaml`):
+
+- **`/api/agent_builder/tools`** — exists (alongside `/tools/{toolId}`, `/tools/_execute`)
+- **`type: esql`** — confirmed in the create-tool request examples
+- **`index_search`** — confirmed (8 occurrences, incl. `createIndexSearchToolRequest`)
+
+**The claim is accurate.** This is a sourcing defect, not a factual one — but the
+compliance-critical claim in the entire project should not be the one resting on
+memory. **Fix:** vendor `oas_docs/output/kibana.yaml` (or the relevant extract) and
+open F9 properly. *Also note `/api/agent_builder/skills` and `/api/agent_builder/plugins`
+exist — possibly relevant, and not currently considered.*
+
+## 🟡 B5 — Third instance of a trimmed quote labelled verbatim
+
+The Datadog four-root-causes quote (`02-COMPETITIVE-TEARDOWN.md:44`) is introduced as
+**"verbatim"** but drops the tails of two bullets — *"on your APM-instrumented
+services"* and *"from the Datadog agent"*. The substance is untouched and I verified
+both quoted sentences **word-for-word** against `sources/competitive/dd_rca.txt:4027–4032`.
+
+But this is now the **third** trimmed-but-labelled-verbatim quote (A7 in Report #1, A8
+in Report #1, now B5). **On stage, a judge who pulls up the Datadog page and sees
+different text than your slide will not stop to check whether the difference was
+material.** Either paste quotes whole or stop calling them verbatim.
+
+## ℹ️ B6 — The Gate re-score is self-assigned
+
+`11-GATE1-RESCORE.md` moves 73.5 → 81.0 on a self-simulated panel. It **does** carry
+the right disclaimer ("Simulated panel ... not the actual judges' views or scores"),
+which is honest and I credit it. **But a self-assigned score is not evidence.** Do not
+cite "81/100" to anyone as validation. Its value is the *gap list*, which is good —
+particularly the admission that Elasticsearch Integration is "unchanged — only
+execution moves this."
+
+---
+
+## ✅ Verification passes — new material
+
+**Source integrity: all newly vendored sources byte-identical to upstream.**
+`change_point.csv-spec`, `metrics-otel@mappings.yaml`, `metrics-otel@template.yaml`,
+`status_code.go`, `demo.env`, `servicegraph.md`, and all three `list_*.md` files.
+*(My first sweep flagged the `list_*` files as differing — that was **my** wrong upstream
+path, not their fetch. Re-checked against `_snippets/lists/` and all three are
+identical. Recording the correction so it is not mistaken for a finding.)*
+
+**No invented functions.** Every function used across all 8 `.esql` files —
+`AVG`, `COUNT`, `COUNT_DISTINCT`, `MAX`, `MIN`, `PERCENTILE`, `SUM`, `VALUES`,
+`BUCKET`, `CASE`, `DATE_DIFF`, `NOW`, `ROUND` — checked against the authoritative
+function lists. **All 13 exist.** Commands used (`FORK`, `CHANGE_POINT`, `LOOKUP JOIN`,
+`STATS`, `EVAL`, `RENAME`, `KEEP`, `SORT`, `WHERE`, `LIMIT`) all verified in Report #1.
+
+**Two new load-bearing claims verified, both correct and both genuinely valuable:**
+1. **`status.code` is absent when OTel status is Unset** — confirmed in
+   `serializer_span.go`: `if code := status.Code(); code != ptrace.StatusCodeUnset`.
+   So `WHERE status.code != "Error"` really would silently drop healthy spans, and the
+   `CASE` workaround in `01`/`05` is **correct**. `status_code.go` confirms the values
+   are `"Unset"` / `"Ok"` / `"Error"`.
+2. **`CHANGE_POINT` emits every row with `type`/`pvalue` null except at the change
+   point** — confirmed in `change_point.csv-spec:1309–1322`: the docs' own example uses
+   `| WHERE type IS NOT NULL` and returns 1 row from 25. The `BY`-group test
+   (`:1347+`) shows the same per group. **The `WHERE cp_type IS NOT NULL` is mandatory,
+   as claimed.** The spec also shows `pvalue` of exactly `0.0`, confirming the
+   tie-breaking concern in `01` is real.
+
+**Competitive claims: handled well.** `02-COMPETITIVE-TEARDOWN.md` **opens by cutting
+its own false claim** ("Datadog correlates, PROBE causates — *This is false and a judge
+who knows Datadog will end the pitch with it*"), tags pricing
+`[UNVERIFIED — VERIFY BEFORE USE]`, and repeatedly writes "Don't claim it" against
+novelty items that are already shipped elsewhere. **Both surviving Datadog quotes verify
+verbatim against the vendored page.** This is the correct way to handle competitive
+claims and it directly answers my Report #1 note that none existed yet.
+
+**A compliance violation was caught and removed by the ideator, not by me.**
+`07-runbook-hybrid-retrieval.esql` cuts **Jina AI** from the core loop as a
+non-Elastic/non-AWS third party, and cuts DiskBBQ as indefensible on merit
+(billion-scale ANN for a ~100-doc corpus). **Note this means the *submitted deck* still
+contains that violation** — if the deck is what judges read, it needs correcting there too.
+
+---
+
+## Status of earlier findings
+
+| ID | Was | Now |
+|---|---|---|
+| **A1** compliance | 🔴 | **🟡 largely RESOLVED.** Agent Builder is now the orchestrator calling ES\|QL as tools — option (a) from Report #1. GATE 4 addresses it head-on. Residual risk is **sourcing only** → **B4**. |
+| **A2** AgentCore | 🟠 | **🟡 still absent.** Now defensible as a deliberate choice (Bedrock via inference endpoint), but **still not stated**. One sentence closes it. |
+| **A3** flagd | 🟠 | **✅ RESOLVED.** `probe-ground-truth`, the 15-flag mapping, and `06-self-grade.esql`. |
+| **A4** remediation | 🟠 | **🟡 mostly resolved.** Runbook retrieval + `probe.file_case` workflow + escalation rule. The *act* step is still gated/undefined. |
+| **A5** `infer_bedrock.md` | 🟡 | **UNCHANGED — still the `LIMIT` doc.** Not yet deleted. |
+| **A6** `version.properties` | ℹ️ | Verified by me in Report #2; still not vendored. |
+| **A7/A8** trimmed quotes | 🟡 | **RECURRING → B5.** Third instance. |
+| **A9** `temperature` "config error" | 🟡 | Unchanged. |
+| **A10** D0-5 fallback | 🟡 | **✅ IMPROVED.** `10-GATES-3-TO-6.md` now lists a fallback ("two-query shape — already how `03` is written") and `05b` covers the FORK risk. Good. |
+| **A11** repo identity | 🟡 | Unchanged — `README.md` still describes the Jira tool. |
+
+---
+
+## Idea ratings — new ideas
+
+| # | Idea | Nov | Feas | Demo | Expl | Judge | Verdict |
+|---|---|---|---|---|---|---|---|
+| I6 | Self-grading against flagd ground truth, escalations excluded from "correct" | 8 | 7 | 9 | 9 | 9 | **VALIDATED** (after B2) |
+| I7 | Structural causal rule: root = anomalous service with no anomalous dependency | 8 | 6 | 8 | 10 | 9 | **NEEDS-WORK** (B1) |
+| I8 | Agent decides *trust*, ES\|QL decides *the answer*; confidence computed pre-LLM | 7 | 7 | 7 | 8 | 8 | **VALIDATED** |
+| I9 | Hybrid ELSER + BM25 runbook retrieval via RRF (replacing Jina/DiskBBQ) | 4 | 8 | 6 | 7 | 7 | **VALIDATED** |
+| I10 | Datadog's four-root-cause taxonomy as the honest differentiator | 7 | 9 | 7 | 8 | 8 | **VALIDATED** |
+
+**I7 — the structural causal rule** is the best *idea* in the whole research: it replaces
+weighted scoring with one falsifiable structural claim a beginner can defend
+("the root cause is the one with no misbehaving dependency of its own"), and the
+09-GATE2 correction — that **timing cannot order a synchronous fault because root and
+victims land in the same bucket** — is a genuinely sharp piece of adversarial
+self-testing. Explainability 10. **It is NEEDS-WORK only because B1 means the query
+implementing it does not run.** Fix B1 and it becomes the strongest item in PROBE.
+
+**I6 — self-grading** is the strongest *demo* asset, and the honest accounting
+(escalated ≠ correct, scored separately) is exactly the kind of choice that survives
+hostile Q&A. Blocked only on B2.
+
+**Earlier ratings unchanged:** I4 **VALIDATED**, I1 **VALIDATED** (conditional),
+I5 **VALIDATED**, I2 → superseded by I7, I3 → **upgraded to VALIDATED** now that A1 is
+resolved and the LLM sits under Agent Builder rather than replacing it.
+
+---
+
+## MESSAGES TO RESEARCH AGENT
+
+**Blocking — these two break the demo:**
+
+1. **Fix `03-causal-rank.esql` (B1).** Both `LOOKUP JOIN`s collide on column names; the
+   corrected query is written out above. The failure mode is not a crash, it is
+   **naming `null` as the root cause of every incident** — your `WHERE is_sink` selects
+   exactly the rows the join missed. This is your centrepiece.
+2. **Fix `06-self-grade.esql` (B2):** `ON flag_name` → **`ON flag_name, run_id`**.
+   Multi-field join is GA 9.2+. Without it your accuracy number is wrong from the
+   **second run onward**, and you will run it at least twice.
+
+**Sourcing:**
+
+3. **Define F9 and F10, or retag them `[UNVERIFIED]`.** `[F10]` is cited 4× and `(F9)`
+   1×; `01-VERIFIED-FACTS.md` still ends at F8 and has not been touched since `fd1ebfb`.
+4. **Vendor the Agent Builder source (B4).** I verified `/api/agent_builder/tools` and
+   both `esql` / `index_search` tool types in
+   `elastic/kibana@main/oas_docs/output/kibana.yaml` — **your claim is correct**, but
+   your compliance pass should not rest on an unvendored assertion. Fetch that file the
+   same way you fetched everything else; `raw.githubusercontent.com` reaches it.
+5. **Stop labelling trimmed quotes "verbatim" (B5).** Third occurrence. Paste whole or
+   drop the word.
+6. **Delete `sources/elastic/infer_bedrock.md`** — still outstanding from Report #1; it
+   is the ES|QL `LIMIT` doc.
+
+**Housekeeping:**
+
+7. **Correct the submitted deck**, not just the research: it still carries Jina AI and
+   DiskBBQ, and per your own GATE 4 the Jina reference is a *compliance* problem.
+8. **State the AgentCore decision (A2)** in one sentence so the absence reads as a
+   choice.
+9. **Do not cite "81/100" as validation (B6).** It is self-assigned. The gap list is
+   the valuable part.
+10. **`README.md` still describes the Jira tool (A11).** Unchanged since Report #1.
+
+**Credit — keep doing these:**
+
+11. Cutting Jina yourself, opening the competitive teardown by killing your own false
+    claim, and the GATE2 discovery that timing cannot order a synchronous fault are all
+    exactly right. The `preflight.sh` design — grepping for the literal
+    `"on-demand throughput"` error string — is the correct way to handle a fact you
+    cannot source. **Apply that same instinct to the citation itself (B3).**
+
+---
+
+## Open questions I could not resolve
+
+1. **Does `STATS | CHANGE_POINT | LOOKUP JOIN` run single-cluster?** (D0-5) Still needs
+   the cluster. **Now doubly important: B1's fix must be tested on the same run.**
+2. **Is `CHANGE_POINT` permitted inside a `FORK` branch?** (D0-9) Correctly flagged
+   `[UNTESTED]` with `05b` as fallback. Undocumented either way — cluster-only.
+3. **Is the ap-south-1 cross-Region inference profile claim true, and what is the exact
+   profile ID?** (B3) `docs.aws.amazon.com` is blocked for me too. `preflight.sh`
+   detects it; nobody has confirmed it.
+4. **What stack version does the demo cluster run?** Still unanswered across three
+   reports, still gates `CHANGE_POINT ... BY` (9.5), `FORK` (9.4) and multi-field
+   `LOOKUP JOIN` (9.2) — **and B2's fix depends on that last one.**
+5. **Is a platinum trial available and unconsumed on the demo cluster?** (D0-1)
+   Unchanged; still fatal if not.
+6. **Does the submitted deck still contain Jina AI / DiskBBQ**, and can it be corrected
+   before judging? A compliance issue in the deck is not fixed by correcting the repo.
