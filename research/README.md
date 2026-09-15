@@ -1,8 +1,11 @@
 # PROBE — Research & Design
 ### Forge the Future 2026 · Bengaluru finale · **9-hour build**
 
-**Gate 1: 81.0/100** (top-3 contender band, no dead criterion) · **Gate 2: 7.6/10 technical**
-· Gates 3–6: pass.
+**Gate 1: 84.5/100** — top of the contender band, no dead criterion. **Gate 2: 7.6/10.**
+Gates 3–6 pass. **Algorithm proven offline: 70/70 single faults, both concurrent scenarios.**
+
+> **Deliberately not scored above 85.** Nothing has executed on a cluster. The algorithm is
+> proven; the ES|QL is not. The last ~5 points are execution, not design.
 
 ---
 
@@ -18,10 +21,13 @@
 | 6 | [`08-PITCH-COST-MARKET.md`](08-PITCH-COST-MARKET.md) | 30-second opening, sourced cost, buyer and wedge, the ask. |
 | 7 | [`02-COMPETITIVE-TEARDOWN.md`](02-COMPETITIVE-TEARDOWN.md) | Sourced competitor teardown + prior art. **Contains a claim you must cut.** |
 | 8 | [`10-GATES-3-TO-6.md`](10-GATES-3-TO-6.md) | Spoken 90s explanations, compliance, demo risk, silent-wrongness. |
-| 9 | [`09-GATE2-REALITY-CHECK.md`](09-GATE2-REALITY-CHECK.md) | Adversarial critique. Found two real defects. |
-| 10 | [`06-GATE1-SCORECARD.md`](06-GATE1-SCORECARD.md) · [`11-GATE1-RESCORE.md`](11-GATE1-RESCORE.md) | Panel scoring, Q&A, ranked fixes. |
+| 9 | [`12-SIMULATION-RESULTS.md`](12-SIMULATION-RESULTS.md) | ⭐ Offline proof of the algorithm. **Found 2 more bugs.** Run: `cd sim && python3 harness.py` |
+| 10 | [`09-GATE2-REALITY-CHECK.md`](09-GATE2-REALITY-CHECK.md) | Adversarial critique. Found two real defects. |
+| 11 | [`ui/incident-card.html`](ui/incident-card.html) | The Incident Card — makes the evidence chain legible. Open in a browser. |
+| 12 | [`06-GATE1-SCORECARD.md`](06-GATE1-SCORECARD.md) · [`11-GATE1-RESCORE.md`](11-GATE1-RESCORE.md) | Panel scoring, Q&A, ranked fixes. |
 
 `esql/` — the queries. `artifacts/` — runnable pre-flight, ground truth, graph builder.
+`sim/` — the offline simulation. `ui/` — the Incident Card.
 `sources/` — archived primary sources (Elastic doc source repos, OTel collector source).
 
 ---
@@ -50,6 +56,10 @@
 
 5. **`CHANGE_POINT` requires a PLATINUM licence.** Start the trial in **minute one**.
 
+6. **Use 5-second buckets, not 10.** Simulation measured that the detector needs ~8
+   post-change buckets *regardless of width* — so width is a linear latency dial.
+   5 s ⇒ ~40 s to root cause; 10 s ⇒ ~80 s. Both stay above the 22-bucket floor.
+
 ---
 
 ## Changed from the submitted deck
@@ -67,7 +77,10 @@
 
 ## Honest open risks
 
-- **Nothing has run.** Every query is `[UNTESTED]`. This is a design, not a system.
+- **No ES|QL has run.** The *algorithm* is proven offline (70/70); the *queries* are
+  `[UNTESTED]`. Never present simulated numbers as live results.
+- **Simulated latency (~40 s) used a stand-in detector**, not Elasticsearch's real
+  `CHANGE_POINT`. Measure it at pre-flight and quote the real number.
 - **Two silent failures remain unsafe:** a service under 22 buckets is skipped invisibly, and
   a stale graph makes a new service look like a root. 10-minute pre-demo checks mitigate both.
 - **Bedrock prices are from secondary sources** — `aws.amazon.com` was blocked by this

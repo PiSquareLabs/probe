@@ -51,3 +51,41 @@ what makes me believe the rest."
 Not more design. **Get `03-causal-rank.esql` returning a correct root cause on a live
 cluster.** Every remaining deduction across Elasticsearch Integration, Demo Quality and Tech
 Stack traces to the same root: nothing has executed.
+
+---
+
+# Second re-score — after offline simulation + Incident Card
+**81.0 → 84.5 / 100**
+
+| Criterion | Wt | 73.5 run | 81.0 run | **Now** | What moved it |
+|---|---|---|---|---|---|
+| Originality | 10 | 7 | 7.5 | **8** | Splitting now *proven* across 70 runs + 2 concurrent scenarios, not asserted |
+| AI Implementation | 15 | 12 | 13 | **13** | Escalation rule empirically validated — and the harness caught a bug that would have escalated the flagship demo |
+| Elasticsearch Integration | 15 | 12.5 | 12.5 | **12.5** | ⚠ **held** — the algorithm is proven but **no ES\|QL has executed** |
+| Technology Stack | 15 | 11 | 12 | **12.5** | Latency now measured, not estimated; bucket size is an evidence-based decision |
+| Problem Solving | 10 | 8.5 | 9 | **9** | — |
+| Market Potential | 10 | 5 | 8 | **8** | — |
+| Interface Design | 8 | 4.5 | 4.5 | **6.5** | ☠→✅ **Incident Card built.** Evidence chain legible to a non-builder |
+| Usability | 7 | 5 | 5.5 | **6** | One screen an SRE lead can read and act on |
+| Demo Quality | 5 | 4 | 4.5 | **4.5** | ⚠ **held** — still needs to run live |
+| Pitch Effectiveness | 5 | 4 | 4.5 | **4.5** | — |
+| **Total** | **100** | 73.5 | 81.0 | **84.5** | |
+
+## Why I am NOT scoring this above 85
+
+The rubric's 85+ band says *"Be suspicious of yourself if you land here."* I am.
+**Nothing has executed on a cluster.** Elasticsearch Integration and Demo Quality are
+both **deliberately held** at their previous values, because the only thing that moves
+them is running the queries. Scoring them higher would be exactly the grade inflation
+the rubric warns against.
+
+**Ceiling once the queries run: ~89.** That is the winning band, and it needs **zero
+further design work.**
+
+## What remains — one item
+
+| Gap | Points | When |
+|---|---|---|
+| Execute `03-causal-rank.esql` on a cluster | +4.5 (ES Integration 12.5→14, Demo 4.5→5) | H0:45–H2 |
+
+Everything else is done.
