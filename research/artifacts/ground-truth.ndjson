@@ -1,0 +1,28 @@
+{"index": {"_index": "probe-ground-truth", "_id": "adFailure"}}
+{"flag_name": "adFailure", "flag_variant": "on", "expected_root_svc": "ad", "note": "Fail ad service"}
+{"index": {"_index": "probe-ground-truth", "_id": "adHighCpu"}}
+{"flag_name": "adHighCpu", "flag_variant": "on", "expected_root_svc": "ad", "note": "High CPU in ad service"}
+{"index": {"_index": "probe-ground-truth", "_id": "adManualGc"}}
+{"flag_name": "adManualGc", "flag_variant": "on", "expected_root_svc": "ad", "note": "Forced full GC in ad service"}
+{"index": {"_index": "probe-ground-truth", "_id": "cartFailure"}}
+{"flag_name": "cartFailure", "flag_variant": "100%", "expected_root_svc": "cart", "note": "Fail cart service n% of the time"}
+{"index": {"_index": "probe-ground-truth", "_id": "emailMemoryLeak"}}
+{"flag_name": "emailMemoryLeak", "flag_variant": "1000x", "expected_root_svc": "email", "note": "Memory leak in email service"}
+{"index": {"_index": "probe-ground-truth", "_id": "failedReadinessProbe"}}
+{"flag_name": "failedReadinessProbe", "flag_variant": "on", "expected_root_svc": "cart", "note": "readiness probe failure for CART service (name is misleading)"}
+{"index": {"_index": "probe-ground-truth", "_id": "imageSlowLoad"}}
+{"flag_name": "imageSlowLoad", "flag_variant": "10sec", "expected_root_svc": "image-provider", "note": "slow loading images surfaced in the frontend"}
+{"index": {"_index": "probe-ground-truth", "_id": "intlShippingSlowdown"}}
+{"flag_name": "intlShippingSlowdown", "flag_variant": "10sec", "expected_root_svc": "shipping", "note": "delays international shipping responses"}
+{"index": {"_index": "probe-ground-truth", "_id": "kafkaQueueProblems"}}
+{"flag_name": "kafkaQueueProblems", "flag_variant": "on", "expected_root_svc": "kafka", "note": "queue overload + consumer-side delay -> lag spike"}
+{"index": {"_index": "probe-ground-truth", "_id": "paymentFailure"}}
+{"flag_name": "paymentFailure", "flag_variant": "100%", "expected_root_svc": "payment", "note": "fail payment charge requests n%"}
+{"index": {"_index": "probe-ground-truth", "_id": "paymentUnreachable"}}
+{"flag_name": "paymentUnreachable", "flag_variant": "on", "expected_root_svc": "payment", "note": "payment service unavailable"}
+{"index": {"_index": "probe-ground-truth", "_id": "productCatalogFailure"}}
+{"flag_name": "productCatalogFailure", "flag_variant": "on", "expected_root_svc": "product-catalog", "note": "fail product catalog on a specific product"}
+{"index": {"_index": "probe-ground-truth", "_id": "productCatalogLockContention"}}
+{"flag_name": "productCatalogLockContention", "flag_variant": "on", "expected_root_svc": "product-catalog", "note": "lock contention on product catalog DB (LATENCY, not errors)"}
+{"index": {"_index": "probe-ground-truth", "_id": "recommendationCacheFailure"}}
+{"flag_name": "recommendationCacheFailure", "flag_variant": "on", "expected_root_svc": "recommendation", "note": "fail recommendation service cache"}
