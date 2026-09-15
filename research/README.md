@@ -24,7 +24,8 @@ Gates 3–6 pass. **Algorithm proven offline: 70/70 single faults, both concurre
 | 9 | [`12-SIMULATION-RESULTS.md`](12-SIMULATION-RESULTS.md) | ⭐ Offline proof of the algorithm. **Found 2 more bugs.** Run: `cd sim && python3 harness.py` |
 | 10 | [`09-GATE2-REALITY-CHECK.md`](09-GATE2-REALITY-CHECK.md) | Adversarial critique. Found two real defects. |
 | 11 | [`ui/incident-card.html`](ui/incident-card.html) | The Incident Card — makes the evidence chain legible. Open in a browser. |
-| 12 | [`06-GATE1-SCORECARD.md`](06-GATE1-SCORECARD.md) · [`11-GATE1-RESCORE.md`](11-GATE1-RESCORE.md) | Panel scoring, Q&A, ranked fixes. |
+| 12 | [`13-LEARNINGS.md`](13-LEARNINGS.md) | ⭐ **Everything learned this session** — assumptions that were wrong, bugs found, transferable lessons. |
+| 13 | [`06-GATE1-SCORECARD.md`](06-GATE1-SCORECARD.md) · [`11-GATE1-RESCORE.md`](11-GATE1-RESCORE.md) | Panel scoring, Q&A, ranked fixes. |
 
 `esql/` — the queries. `artifacts/` — runnable pre-flight, ground truth, graph builder.
 `sim/` — the offline simulation. `ui/` — the Incident Card.
