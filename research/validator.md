@@ -328,3 +328,125 @@ Ordered. 1–3 are blocking; do them before generating new ideas.
 6. **Is the existing Jira codebase in scope?** Affects whether A4's remediation path is
    already half-built or needs designing from scratch. (A11)
 
+
+---
+---
+
+# Validator Report — 2026-09-15 (Report #2)
+
+**Trigger:** standing instruction to keep verifying sources and correct findings as new
+material lands.
+**Ideator branch state:** `claude/pensive-dijkstra-h9pfbv` still at `fd1ebfb` — **no new
+research commits since Report #1.** Nothing in the ledger has changed.
+
+**What is new in this report:** I gained direct network access to
+`raw.githubusercontent.com` (it is reachable from my session even though
+`www.elastic.co` is not). That let me do the one thing Report #1 explicitly could not,
+and it **resolves A6 and corrects a caveat I placed on my own Report #1.**
+
+## ✅ Source integrity sweep — all 25 vendored files verified against upstream
+
+Report #1 closed with this caveat:
+
+> "my verification is only as good as the vendored tree ... I could not independently
+> confirm that those vendored files match what Elastic currently publishes — I verified
+> the ledger against its own evidence, which catches misreadings but not a bad fetch."
+
+**That caveat is now lifted.** I fetched every file in `research/sources/` from its
+upstream path and byte-compared.
+
+| Result | Count |
+|---|---|
+| **Byte-identical to upstream** | **24 / 24** correctly-named files |
+| Mis-fetched (see A5 below) | 1 (`infer_bedrock.md`) |
+
+Every one of the 24 — all ES|QL docs, all four OTel-data mapping templates, both
+Bedrock `.ts` specs, all four Go sources, and `demo.flagd.json` — is **byte-identical**
+to its upstream file. **No bad fetches, no drift, no tampering, no transcription
+errors anywhere in the evidence tree.**
+
+This materially raises confidence in the whole ledger. The ideator's decision to vendor
+doc *source* repositories is now independently validated as faithful, not merely
+convenient.
+
+## Corrections to Report #1
+
+### A6 — **RESOLVED. F2 was accurate. My finding was about sourcing, not truth.**
+Report #1 flagged F2 (`elasticsearch = 9.6.0`, `lucene = 10.5.1`) as the one
+`[DOCUMENTED]` claim whose source was not vendored. I have now fetched
+`elastic/elasticsearch@main/build-tools-internal/version.properties` directly:
+
+```
+elasticsearch     = 9.6.0
+lucene            = 10.5.1
+```
+
+**Exactly as F2 stated, to the digit.** The claim was correct; only the evidence was
+missing from `sources/`. **Downgrade A6 from 🟡 to ℹ️ housekeeping** — the ideator should
+still vendor the file for completeness, but nothing built on F2 is at risk, and the
+version-gating argument in F1 (and therefore the 9.5 design target) **stands verified.**
+
+### A5 — **CONFIRMED and characterised more precisely.**
+`sources/elastic/infer_bedrock.md` is **byte-identical to
+`elastic/elasticsearch@main/docs/reference/query-languages/esql/commands/limit.md`.**
+So this is a clean **wrong-URL fetch** — the ideator requested the `LIMIT` page and
+saved the response under a Bedrock filename. It is *not* corruption, truncation or a
+partial download. Severity unchanged (🟡): F7 is sourced from the `.ts` specs, which
+verified byte-identical, so no *fact* depends on this file. It remains a filename that
+lies about its contents and should be deleted or re-fetched.
+
+### Unchanged findings
+**A1 (🔴 compliance), A2, A3, A4, A7, A8, A9, A10, A11 all stand exactly as written in
+Report #1.** The integrity sweep confirms the ledger faithfully reproduces its sources —
+it says nothing about the two problems that were never about sourcing:
+- **A1 is a reasoning gap, not a sourcing gap.** F6's compliance conclusion is not
+  wrong because a file was mis-fetched; it is unsupported because *no source on Agent
+  Builder or Workflows exists in the tree at all.* A perfect evidence tree with a hole
+  in it is still a hole. **A1 remains the single most severe open finding.**
+- **A2/A3/A4 are absences.** Verification cannot fix them.
+
+### Note on my own A1 follow-up — recorded so it is not mistaken for evidence
+I probed three plausible documentation paths for Elastic Agent Builder in
+`elastic/docs-content`; all three returned 404. **I am drawing no conclusion from this.**
+It means my path guesses were wrong. It is **not** evidence that Agent Builder is
+undocumented or does not exist, and it must not be cited as such. Sourcing that surface
+remains message #1 to the research agent.
+
+## Idea ratings — unchanged
+
+No new ideas were added. All five ratings from Report #1 stand: **I4 VALIDATED**,
+**I1 VALIDATED** (conditional), **I5 VALIDATED**, **I2 NEEDS-WORK**, **I3 NEEDS-WORK**.
+The A6 resolution slightly *strengthens* I1: its version-gating premise is now
+independently confirmed rather than assumed.
+
+## MESSAGES TO RESEARCH AGENT (delta since Report #1)
+
+Messages 1–10 from Report #1 **all still apply**, with two edits:
+
+- **Message 3 is now optional housekeeping, not blocking.** I verified
+  `version.properties` upstream myself and F2 is correct. Vendor it for completeness,
+  but do not treat it as a gate.
+- **Message 4 is confirmed:** `infer_bedrock.md` is the `LIMIT` doc, byte-for-byte.
+  Delete it or re-fetch the page you meant.
+- **New — message 11: `raw.githubusercontent.com` is reachable from this environment
+  even though `www.elastic.co` and `docs.aws.amazon.com` are not.** Your access note in
+  the ledger header is correct and your workaround is sound. I have now independently
+  confirmed all 24 of your fetches are byte-exact. **Keep using this method.** It is the
+  reason this research is auditable at all, and it means the AgentCore (A2) and Agent
+  Builder (A1) gaps are closable the same way — the egress block is not a real barrier
+  to sourcing them.
+- **Priority is unchanged: A1 first.** Everything else in this report is good news; A1
+  is still the thing that can disqualify PROBE, and it has not moved since Report #1.
+
+## Open questions I could not resolve — unchanged
+
+Questions 1–6 from Report #1 all remain open. None were resolvable by source
+verification:
+- **Q1 (is `COMPLETION` acceptable as Agent-Builder reasoning)** is a ruling about the
+  rules — still needs a human.
+- **Q2, Q3** need the live cluster.
+- **Q4 (cluster stack version)** — note that F2 is now *verified* as describing
+  `main` = 9.6.0 unreleased, which firms up the inference that released GA is 9.5.x. But
+  **what the demo cluster actually runs is still unknown and still the cheapest
+  high-value check available.**
+- **Q5 (platinum trial)**, **Q6 (Jira codebase scope)** unchanged.
