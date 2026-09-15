@@ -17,7 +17,7 @@ FROM traces-*.otel-*
 
 | STATS p95_ns = PERCENTILE(duration, 95),
         calls  = COUNT(*)
-    BY ts = BUCKET(@timestamp, 10 seconds), svc
+    BY ts = BUCKET(@timestamp, 5 seconds), svc
 
 | WHERE calls >= 5
 | EVAL p95_ms = p95_ns / 1000000.0

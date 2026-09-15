@@ -20,41 +20,51 @@
    │                                                            ┘
    ├─ RECOGNITION  ───────────────────────────────────────────┐
    │   bucket close + post-change evidence                     │
-   │     CHANGE_POINT must see enough post-change points       │  ~20–60 s
-   │     to call it: ~3–6 buckets × 10 s                       │  ◄── DOMINANT TERM
+   │     detector needs ~8 post-change buckets  (MEASURED)     │  ~40 s @ 5s
+   │     8 × 5 s bucket = 40 s   (8 × 10 s = 80 s)             │  ◄── DOMINANT TERM
    │   detection query                      < 1 s              │
    │   causal ranking query (2 LOOKUP JOINs)  < 1 s            │
    │                                                            ┘
    ▼
-  t1  ROOT CAUSE NAMED, WITH EVIDENCE      ≈ 30–70 s      ◄── no LLM has run yet
+  t1  ROOT CAUSE NAMED, WITH EVIDENCE      ≈ 45 s        ◄── no LLM has run yet
    │
    ├─ EXPLANATION / REMEDIATION  ─────────────────────────────┐
    │   hybrid runbook retrieval (ELSER + BM25 + RRF)  ~50–150 ms│  ~2–5 s
    │   Bedrock confirm + write remediation             ~1–4 s  │
    │                                                            ┘
    ▼
-  t2  PROPOSED FIX + ROLLBACK, AWAITING HUMAN     ≈ 35–75 s
+  t2  PROPOSED FIX + ROLLBACK, AWAITING HUMAN     ≈ 50 s
 ```
 
-**[REASONING]** These are budgets derived from the mechanism and from documented
-defaults, **not measured results**. The *structure* is the claim; the numbers are
-[UNTESTED] until the cluster runs.
+**[REASONING + SIMULATED]** The ingest figures are documented defaults. The
+recognition figure is **measured in offline simulation** (`research/sim/`, see
+`12-SIMULATION-RESULTS.md` Result 5) — *not* on a cluster, and with a stand-in
+detector, so it is **[UNTESTED]** against the real `CHANGE_POINT`. The *structure*
+is the claim; **measure the real number at pre-flight and quote that.**
+
+⚠ **This was corrected.** The original estimate here was 3–6 buckets / 20–60 s.
+Simulation measured **8–9 buckets**, i.e. roughly **2× worse**. Quoting the old
+figure on stage would have been an over-claim.
 
 ### The one number that matters, and its honest tradeoff
 Recognition is dominated by **how many post-change buckets `CHANGE_POINT` needs**.
 That is a real, tunable, explainable knob:
 
-| Bucket | Buckets in 20 min | Detection latency | Risk |
+**MEASURED:** the detector needs **~8 post-change buckets regardless of bucket
+width** — so width is a *linear* latency dial.
+
+| Bucket | Buckets in 20 min | Detection latency (measured) | Risk |
 |---|---|---|---|
-| 5 s | 240 | **~20–30 s** | noisier; low-traffic services fall under the 22-value floor [F1] |
-| 10 s | 120 | ~30–60 s | **the demo default — safe margin above the 22 floor** |
-| 30 s | 40 | ~90–180 s | very stable, too slow to impress |
+| **5 s** | 240 | **~40 s** ⭐ **use this** | fewer calls/bucket — verify low-traffic services clear `calls >= 5` |
+| 10 s | 120 | ~80 s | safest, but twice as slow |
+| 15 s | 80 | ~120 s | no benefit |
+| 20 s | 60 | ~160 s | too slow to impress |
 | 60 s | 20 | ✘ **fails** | **below the 22-value minimum — silently returns nothing** [F1] |
 
-> **Say this on stage when asked "how fast":** *"Thirty to sixty seconds, and I can tell you
-> exactly what sets it — the change-point detector needs a handful of buckets after the
-> change to be sure. Shrink the bucket and I go faster and noisier. That's the whole
-> tradeoff, and it's a dial, not a mystery."*
+> **Say this on stage when asked "how fast":** *"About forty seconds, and I can tell you
+> exactly what sets it — the detector needs roughly eight buckets of evidence after the
+> change. Bucket width is the dial: halve it, I halve the latency and add noise. That's
+> the whole tradeoff, and it's a dial, not a mystery."*
 
 That answer is worth more than any number, because it demonstrates the team knows what
 governs its own latency.

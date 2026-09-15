@@ -176,8 +176,18 @@ ESCALATE (do not act) if ANY of:
   - margin < 1 bucket            → temporal order not resolvable
   - candidate is a leaf with 0 dependents  → nothing propagated; likely noise
   - no runbook scores above the RRF floor  → no known remediation
-  - > 40% of services anomalous  → probably infra-wide, not a service fault
+  - coverage < 0.80              → some anomalies explained by NO root
+                                   (i.e. unexplained breakage => likely infra-wide)
+  - more than 5 roots at once    → implausible as independent incidents; systemic
 ```
+
+⚠ **This rule was corrected by simulation.** It originally escalated whenever
+*">40% of services are anomalous"*. But N genuine concurrent incidents
+**legitimately** make many services anomalous — so the rule fired on exactly the
+case PROBE exists to handle, escalating all three incidents in the flagship demo.
+Headcount does not indicate a systemic event; **unexplained** anomaly does. If the
+roots' blast radii *cover* the anomalous set, the split is trustworthy however many
+services are involved. See `12-SIMULATION-RESULTS.md` Result 4.
 On escalation PROBE states **"confidence 60% — escalating"**, files the case
 with its evidence and its *competing* hypotheses, and **takes no action**.
 

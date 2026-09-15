@@ -156,7 +156,7 @@ Flip **`adHighCpu → on`** *and* **`adFailure → on`** together — two faults
 PROBE returns:
 ```
 incident 2: predicted_root = cart | confidence 0.58 | ESCALATED
-reason: margin < 1 bucket — cart and checkout changed in the same 10s window;
+reason: margin < 1 bucket — cart and checkout changed in the same 5s window;
         temporal precedence is not resolvable at this resolution.
 competing hypotheses: cart, checkout
 ```
@@ -164,7 +164,7 @@ Case filed `awaiting_human`. **No action taken. Self-grade counts this as
 `escalated`, NOT as correct — even though `cart` was right.**
 
 > "I want you to see this one. At 10% failure the signal is genuinely weak, and
-> two services changed inside the same ten-second bucket. PROBE can't order them,
+> two services changed inside the same bucket. PROBE can't order them,
 > so it doesn't pretend to. It says 58%, hands you both hypotheses and the
 > evidence, and stops. And our own scoreboard refuses to give us the point —
 > even though the guess was right. A system that's never unsure is a system

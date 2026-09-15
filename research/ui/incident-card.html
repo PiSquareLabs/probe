@@ -1,0 +1,151 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROBE Incident Card</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#15181d; --muted:#5d6672; --line:#e3e6ea;
+  --ok:#0a7a4a; --warn:#9a6700; --bad:#b4232c; --root:#b4232c; --victim:#6b7480;
+  --accent:#1c53b8; --chip:#eef1f5;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --panel:#161a21; --ink:#e8ecf1; --muted:#9aa4b2; --line:#262d37;
+  --ok:#3fb984; --warn:#d9a441; --bad:#f2646f; --root:#f2646f; --victim:#8b94a3;
+  --accent:#6f9bff; --chip:#1e242d; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --panel:#161a21; --ink:#e8ecf1; --muted:#9aa4b2; --line:#262d37;
+  --ok:#3fb984; --warn:#d9a441; --bad:#f2646f; --root:#f2646f; --victim:#8b94a3;
+  --accent:#6f9bff; --chip:#1e242d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding-block:24px;padding-left:16px;padding-right:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:20px;margin-bottom:16px}
+h1{font-size:19px;margin:0 0 2px} h2{font-size:13px;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
+.top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;justify-content:space-between}
+.verdict{font-size:26px;font-weight:700;color:var(--root);font-family:ui-monospace,monospace}
+.sub{color:var(--muted);font-size:13px}
+.conf{text-align:right;min-width:120px}
+.conf .n{font-size:26px;font-weight:700;color:var(--ok)}
+.bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:0}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;
+  font-weight:600;background:var(--chip);color:var(--muted)}
+.tag.root{background:color-mix(in srgb,var(--root) 16%,transparent);color:var(--root)}
+.tag.victim{background:var(--chip);color:var(--victim)}
+.why{background:var(--chip);border-left:3px solid var(--accent);padding:12px 14px;
+  border-radius:0 8px 8px 0;margin:10px 0}
+.why b{color:var(--accent)}
+.tl{overflow-x:auto} .tl table{min-width:520px}
+.spark{display:inline-block;width:150px;height:18px;vertical-align:middle}
+.btn{padding:9px 16px;border-radius:8px;border:1px solid var(--line);font-weight:600;
+  font-size:13px;cursor:pointer;background:var(--panel);color:var(--ink)}
+.btn.primary{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.danger{background:transparent;border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grade{display:flex;gap:22px;flex-wrap:wrap}
+.grade div span{display:block;font-size:22px;font-weight:700}
+.grade div small{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.pill{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.note{color:var(--muted);font-size:12px;margin-top:10px}
+</style>
+<div class="wrap">
+
+<div class="card">
+  <div class="top">
+    <div>
+      <h2>Root cause</h2>
+      <div class="verdict">product-catalog</div>
+      <div class="sub">Incident <code>INC-4417</code> · detected <code>14:22:41</code> ·
+        6 services affected · <span class="pill">awaiting approval</span></div>
+    </div>
+    <div class="conf">
+      <h2>Confidence</h2>
+      <div class="n">92%</div>
+      <div class="bar"><i style="width:92%"></i></div>
+      <div class="sub" style="margin-top:6px">committed</div>
+    </div>
+  </div>
+
+  <div class="why">
+    <b>Why this service.</b> Five other services changed at the same moment, but every one of
+    them <em>depends on something that is also broken</em>. <code>product-catalog</code> is the
+    only one whose own dependencies are all healthy — so nothing downstream explains it.
+    <br><br>
+    <b>Note on timing.</b> All six changed in the same 10&nbsp;s bucket, because these are
+    synchronous calls. Timing did <em>not</em> pick the root and could not have.
+    <strong>Topology did.</strong>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Evidence — what changed, and when</h2>
+  <div class="tl"><table>
+    <tr><th>Service</th><th>Change point</th><th>Signal</th><th>p-value</th>
+        <th>Broken dependencies</th><th>Verdict</th></tr>
+    <tr><td><code>product-catalog</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">7.4e-26</td><td class="mono">— none —</td>
+        <td><span class="tag root">ROOT CAUSE</span></td></tr>
+    <tr><td><code>frontend</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">3.5e-13</td><td class="mono">product-catalog</td>
+        <td><span class="tag victim">victim</span></td></tr>
+    <tr><td><code>recommendation</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">7.8e-12</td><td class="mono">product-catalog</td>
+        <td><span class="tag victim">victim</span></td></tr>
+    <tr><td><code>checkout</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">1.2e-12</td><td class="mono">product-catalog</td>
+        <td><span class="tag victim">victim</span></td></tr>
+    <tr><td><code>frontend-proxy</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">1.7e-12</td><td class="mono">frontend</td>
+        <td><span class="tag victim">victim</span></td></tr>
+    <tr><td><code>load-generator</code></td><td class="mono">14:22:30</td><td>error rate</td>
+        <td class="mono">2.3e-11</td><td class="mono">frontend-proxy</td>
+        <td><span class="tag victim">victim</span></td></tr>
+  </table></div>
+  <div class="note">p-value = probability this change happened by chance. Lower is more
+    extreme. Produced by <code>CHANGE_POINT</code> in ES|QL — no thresholds configured.</div>
+</div>
+
+<div class="card">
+  <h2>Proposed remediation — not executed</h2>
+  <div class="sub" style="margin-bottom:10px">Runbook <b>RB-012 · Product catalog returning
+    gRPC errors</b> — matched by hybrid retrieval (ELSER + BM25, RRF).
+    Matched terms: <code>product-catalog</code>, <code>gRPC</code>, <code>error rate</code>.</div>
+  <table>
+    <tr><th style="width:110px">Action</th>
+        <td><code>kubectl rollout restart deployment/product-catalog -n otel-demo</code></td></tr>
+    <tr><th>Rollback</th>
+        <td><code>kubectl rollout undo deployment/product-catalog -n otel-demo</code></td></tr>
+    <tr><th>Blast radius</th><td>6 services · checkout path degraded · revenue-affecting</td></tr>
+  </table>
+  <div class="row" style="margin-top:14px">
+    <button class="btn primary">Approve &amp; run</button>
+    <button class="btn danger">Reject</button>
+    <button class="btn">Open in Kibana Case</button>
+    <span class="sub">PROBE has no write access. Nothing runs until a human approves.</span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Self-grade — checked against the fault we injected</h2>
+  <div class="grade">
+    <div><span class="mono">productCatalogFailure</span><small>flag flipped</small></div>
+    <div><span class="mono">product-catalog</span><small>expected root</small></div>
+    <div><span class="mono">product-catalog</span><small>PROBE said</small></div>
+    <div><span style="color:var(--ok)">✔ CORRECT</span><small>grade</small></div>
+    <div><span class="mono">38 s</span><small>time to root cause</small></div>
+  </div>
+  <div class="note">Escalated incidents score as <b>escalated</b>, never as correct — even
+    when the guess turns out right. PROBE only gets credit for answers it stood behind.</div>
+</div>
+
+</div>

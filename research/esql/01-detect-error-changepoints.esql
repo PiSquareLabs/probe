@@ -4,8 +4,13 @@
 // Tags: [DOCUMENTED] field names + command syntax (see research/01-VERIFIED-FACTS.md
 //       F1,F3,F4); [UNTESTED] end-to-end execution on a live cluster.
 // Requires: stack >= 9.5 (CHANGE_POINT ... BY), PLATINUM or TRIAL licence.
-// Window arithmetic: 20 min / 10 s = 120 buckets per service.
+// Window arithmetic: 20 min / 5 s = 240 buckets per service.
 //   CHANGE_POINT needs >= 22 values per series and ignores beyond 1000.  [F1]
+// 5s (not 10s) because simulation measured that the detector needs ~8 POST-CHANGE
+// buckets REGARDLESS of width, so width is a linear latency dial: 8x5s = ~40s to
+// recognition vs 8x10s = ~80s. See research/12-SIMULATION-RESULTS.md Result 5.
+// TRADEOFF: fewer calls per bucket -> verify low-traffic services still clear the
+// `calls >= 5` filter below (pre-flight step 6).
 // ============================================================================
 
 FROM traces-*.otel-*
@@ -24,7 +29,7 @@ FROM traces-*.otel-*
 
 | STATS errors = SUM(is_error),
         calls  = COUNT(*)
-    BY ts = BUCKET(@timestamp, 10 seconds), svc
+    BY ts = BUCKET(@timestamp, 5 seconds), svc
 
 // Guard against divide-by-zero and against noisy micro-samples.
 | WHERE calls >= 5
