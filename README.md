@@ -41,6 +41,7 @@ outbound call changes, and the UI says which one it used.
 Full findings: [`docs/RESEARCH.md`](docs/RESEARCH.md).
 Every key, its free-tier status and a placeholder value: [`docs/KEYS.md`](docs/KEYS.md).
 Design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+**How to test it: [`docs/TESTING.md`](docs/TESTING.md).**
 
 ## What it does
 
@@ -55,13 +56,32 @@ Design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - Searches synced tickets, falling back to JQL before the first sync lands.
 - Encrypts credentials at rest; the API only ever returns masked values.
 
+## Try it without any accounts
+
+`backend/mock_stack.py` fakes Elasticsearch, Kibana and Jira on one port, so you
+can run the whole app — wizard, provisioning, ticket creation, duplicate
+detection — with nothing signed up for and no Docker:
+
+```bash
+cd backend && uvicorn mock_stack:app --port 9999   # terminal 1
+cd backend && uvicorn app.main:app --port 8000     # terminal 2
+cd frontend && npm run dev                         # terminal 3
+```
+
+Then point the wizard at `http://localhost:9999` for all three URLs. Add
+`MOCK_LICENSE=gold` to the mock to exercise the Kibana-connector path instead.
+Step-by-step walkthrough in [`docs/TESTING.md`](docs/TESTING.md).
+
 ## Quick start
 
 ### 1. Elastic stack (optional — point at an existing one instead)
 
 ```bash
-docker compose up -d elasticsearch kibana
+docker compose up -d setup elasticsearch kibana
 ```
+
+The `setup` service sets the `kibana_system` password before Kibana starts;
+`ELASTIC_PASSWORD` alone only covers the `elastic` superuser.
 
 ### 2. Backend
 
@@ -151,12 +171,15 @@ unset the guard is inert, so first-run local development needs no secret.
 ## Tests
 
 ```bash
-cd backend && pytest -q        # 58 tests
+cd backend && pytest -q        # 59 tests
 ```
 
 They cover the licence gate and both routing paths, provisioning step reporting,
 ADF conversion, JQL escaping, encryption at rest and secret masking, using
-`respx` to stand in for Elasticsearch, Kibana and Jira.
+`respx` to stand in for Elasticsearch, Kibana and Jira. No network, no accounts.
+
+See [`docs/TESTING.md`](docs/TESTING.md) for the mock-stack walkthrough and for
+what you need to test against a real Jira site.
 
 ## Limits
 
@@ -167,3 +190,7 @@ ADF conversion, JQL escaping, encryption at rest and secret masking, using
   are not normalised, so tune `DUPLICATE_SCORE_THRESHOLD` to your corpus.
 - The content connector's document shape varies by connector version; the search
   mapping uses wildcards to stay resilient, which costs some precision.
+- `docker-compose.yml` has not been executed end to end — it was written against
+  the documented image behaviour and reviewed, not run.
+- No frontend test suite. The UI was verified by driving Chromium through setup,
+  provisioning and ticket creation, but that check is not committed.
