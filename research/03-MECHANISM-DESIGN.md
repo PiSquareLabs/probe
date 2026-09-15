@@ -5,13 +5,13 @@
 When a microservice system breaks, every tool on the market can tell you *that*
 ten services went bad. The reason none of them reliably tells you *which one is
 to blame* is that they reason about **symptoms in isolation** — a service is
-"anomalous" or it isn't. PROBE reasons about the **two things that make
-causality decidable**: a cause cannot start after its effect (**temporal
-precedence**), and a service whose own dependencies are all healthy cannot be a
-victim (**topological position**). Put those together and the root cause is
-whatever is left: *the anomalous service with no misbehaving dependency of its
-own, that changed first.* That rule is lexicographic, not a weighted score — it
-has no tunable magic numbers, it produces the same answer twice, and it is
+"anomalous" or it isn't. PROBE reasons about **structure**: a service whose own
+dependencies are all healthy cannot be a victim of anything — so it is the
+cause. The root cause is *the anomalous service with no misbehaving dependency
+of its own.* Change-point **timing** does not decide that; it does something
+else, and knowing the difference is the whole trick: timing tells PROBE whether
+it is looking at **one incident or three**. That rule is structural, not a weighted score — it has no
+tunable magic numbers, it produces the same answer twice, and it is
 falsifiable. And because it identifies incidents **by their root rather than by
 a connected blob of services**, it naturally splits N simultaneous unrelated
 faults into N correctly-scoped incidents, which is the exact case that makes
@@ -52,6 +52,43 @@ fix. Demoing that on stage would disprove the pitch live.
 
 **[REASONING]** This is the strongest single moment available, because the
 nuance is only reachable by someone who actually ran it.
+
+---
+
+## 2b. ⚠ What the evidence actually is (corrected after adversarial testing)
+
+The original framing claimed **two** signals — *who broke first* and *who is
+upstream*. Adversarial testing (Gate 2, Finding 1) showed the first one barely
+functions, and the claim had to be re-weighted. Stating it correctly is both
+more honest and a stronger answer under questioning.
+
+**`product-catalog` fails on a synchronous gRPC call.** `frontend`,
+`recommendation` and `checkout` see those errors **on the same requests, within
+milliseconds**. Their change points land in the **same 10-second bucket**.
+Temporal ordering between a root and its victims is **not noisy — it is
+unresolvable**, and a smaller bucket does not fix it, because the real
+propagation delay is near zero.
+
+**The mechanism is unaffected, because topology was always doing the work.**
+In `03-causal-rank.esql`, `WHERE is_sink == true` names the root; the `SORT` only
+orders *multiple independent roots*. `frontend` is never a candidate — not
+because it changed later, but because **it depends on something that is also
+broken.**
+
+| ❌ Don't say | ✅ Say |
+|---|---|
+| "Two signals: who broke first and who's upstream." | "**Topology decides. Time only separates independent incidents.**" |
+| "We sort by who changed first to find the cause." | "We filter to services with no broken dependency. Time tells us whether that's **one** incident or **three**." |
+
+**Where timing genuinely earns its place:** separating concurrent independent
+roots (§2), asynchronous propagation (`kafkaQueueProblems` — consumer lag builds
+over seconds), and gradual resource exhaustion (`emailMemoryLeak`).
+
+> **Prepared answer — give it before you're asked:** *"How do I know
+> product-catalog broke before the frontend? I don't, and I don't need to. They
+> broke at the same instant — it's a synchronous call. What I know is that the
+> frontend depends on something broken and product-catalog doesn't. That's the
+> argument."*
 
 ---
 

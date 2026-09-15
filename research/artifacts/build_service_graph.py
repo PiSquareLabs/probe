@@ -30,7 +30,14 @@ SEED_EDGES = [
     ("checkout","payment"),("checkout","product-catalog"),
     ("checkout","shipping"),("checkout","kafka"),
     ("recommendation","product-catalog"),("shipping","quote"),
-    ("cart","valkey-cart"),("kafka","accounting"),("kafka","fraud-detection"),
+    ("cart","valkey-cart"),
+    # ASYNC / MESSAGING — direction matters and is easy to get backwards.
+    # Edges are caller->callee meaning "caller DEPENDS ON callee", because that is
+    # the direction failure propagates along (a broken callee breaks its callers).
+    # accounting and fraud-detection CONSUME FROM kafka, so they DEPEND ON kafka.
+    # Writing ("kafka","accounting") would make kafka depend on its own consumers,
+    # which inverts the sink rule and makes PROBE name the victims as root causes.
+    ("accounting","kafka"),("fraud-detection","kafka"),
 ]
 
 def _req(path, payload=None, method="GET"):

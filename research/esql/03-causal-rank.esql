@@ -3,16 +3,24 @@
 // ----------------------------------------------------------------------------
 // THE RULE, in one sentence a beginner can defend on stage:
 //
-//   "Among the services that changed, the root cause is the one that has NO
-//    misbehaving dependency of its own, and that changed first."
+//   "Among the services that changed, the root cause is the one with NO
+//    misbehaving dependency of its own."
 //
-// Two independent pieces of evidence, neither of which is an LLM opinion:
-//   1. TOPOLOGICAL  — a service whose own dependencies are all healthy cannot
-//      be a victim; failure propagates from callee UP to caller.
-//   2. TEMPORAL     — a cause cannot start after its effect.
+// ONE signal does the work, and it is structural, not statistical:
+//   TOPOLOGY — a service whose own dependencies are all healthy cannot be a
+//   victim of anything downstream; failure propagates from callee UP to caller.
+//   So a service with zero anomalous dependencies IS the cause.
 //
-// It is a lexicographic rule, NOT a weighted score. That matters: there are no
-// magic weights to defend, and the answer is falsifiable.
+// ⚠ TIMING IS NOT THE DECIDER — this was corrected after adversarial testing
+// (research/09-GATE2-REALITY-CHECK.md, Finding 1). For a SYNCHRONOUS fault the
+// root and its victims fail on the SAME requests, milliseconds apart, so their
+// change points land in the SAME bucket and cannot be ordered at all. The SORT
+// below therefore does NOT pick the root out of the victims -- WHERE is_sink
+// does that. The SORT only orders MULTIPLE INDEPENDENT ROOTS, which is exactly
+// the concurrent-incident case.
+//
+// It is a structural rule, NOT a weighted score. There are no magic weights to
+// defend, and the answer is falsifiable.
 //
 // Inputs (both `index.mode: lookup`, single-shard — required by LOOKUP JOIN [F5]):
 //   probe-anomaly-current  : one doc per anomalous service, written by Stage 1.
@@ -62,6 +70,9 @@ FROM probe-anomaly-current
 
 // LOOKUP JOIN output order is NOT guaranteed, so SORT must come AFTER the
 // joins — never before. [F5 usage notes]
+//
+// `WHERE is_sink` is what NAMES the root cause. The SORT below only orders
+// independent roots when there is more than one (see the timing note above).
 | WHERE is_sink == true
 | SORT change_ts ASC, cp_pvalue ASC
 | KEEP svc, verdict, change_ts, cp_pvalue, anomalous_deps, total_deps, signals

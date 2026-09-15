@@ -69,8 +69,21 @@ Run `03-causal-rank.esql`.
 Talk through it in beginner-safe language while it runs:
 > "Two joins. The first asks, for each broken service, *what does it depend on?*
 > The second asks, *are any of those also broken?* If a service depends on
-> nothing that's broken, nothing upstream explains it — so it's a candidate.
-> Then I sort by who changed first. That's the whole rule."
+> nothing that's broken, then nothing downstream explains it — **so it's the
+> cause.** That's the whole rule."
+
+⚠ **Do NOT say "and then I sort by who changed first."** For a synchronous fault
+the root and its victims break in the *same* bucket — timing cannot separate
+them, and claiming it does invites a question you'd lose. See
+`09-GATE2-REALITY-CHECK.md` Finding 1.
+
+**If asked "how do you know product-catalog broke before the frontend?" — answer
+immediately and without defensiveness:**
+> "I don't, and I don't need to. They broke at the same instant — it's a
+> synchronous call. What I know is that the frontend depends on something that's
+> broken, and product-catalog doesn't. That's the argument. Timing does a
+> different job here — it's what tells me whether I'm looking at one incident or
+> three, and I'll show you that next."
 
 **Output: `product-catalog`, `verdict: root_cause_candidate`**, with
 `anomalous_deps: 0`, its change-point time, its p-value, and `frontend`,
@@ -160,6 +173,36 @@ Case filed `awaiting_human`. **No action taken. Self-grade counts this as
 **[REASONING]** This single case moves Demo Quality, AI Implementation and
 Problem Solving simultaneously, and it is the most common thing a panel finds
 missing.
+
+---
+
+## 6:45 – 7:00 — ⭐⭐⭐⭐ "PICK A FLAG" (the credibility moment)
+
+**This costs zero build time and is worth more than any slide.**
+
+Put the flagd UI on screen showing all 15 flags.
+
+> "Everything so far, I chose. So pick one. Any flag on this screen. I'll tell
+> you the answer before PROBE does, and we'll see if it agrees."
+
+**Why the risk is bounded:** the sink rule was tested against *every*
+service-fault flag in the catalogue (`09-GATE2-REALITY-CHECK.md`, Finding 2) —
+11 scenarios, all correct. You are not gambling; you are showing your work.
+
+**Two flags need a prepared answer:**
+
+- **`loadGeneratorFloodHomepage`** — **not a service fault.** It is a traffic
+  increase; no service is to blame. Correct answer:
+  > "This one's interesting — there's no service at fault. Demand went up. PROBE
+  > should tell you it's a load event, not blame a service. And I'll note this is
+  > exactly the one case Datadog's taxonomy *does* cover — traffic increase is one
+  > of their four root-cause types. They'd get this one and we'd both be right."
+
+- **`productCatalogLockContention`** — raises **latency without errors**, so it is
+  caught only by the latency query (`02`). ⚠ **If `02` was cut under time
+  pressure, do NOT offer free flag choice** — restrict to error-producing flags,
+  or say "latency-only detection is the same query on a different metric; we ran
+  out of clock."
 
 ---
 
