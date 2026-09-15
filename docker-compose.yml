@@ -1,0 +1,59 @@
+# Local Elastic stack for developing against, plus the self-managed connector
+# service. Everything here runs on the free Basic licence.
+#
+#   docker compose up -d elasticsearch kibana
+#   # provision through the Probe UI, then paste the API key into
+#   # connectors-config/config.yml
+#   docker compose up -d connectors
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.1
+    container_name: probe-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-probe-dev-es-passw0rd}
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-probe-dev-es-passw0rd} http://localhost:9200/_cluster/health | grep -qE 'green|yellow'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.1
+    container_name: probe-kibana
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD:-probe-dev-kibana-passw0rd}
+      # Kibana needs a 32-character key to encrypt action connector secrets.
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY:-probe_dev_kibana_encryption_key_32}
+    ports:
+      - "5601:5601"
+
+  # The self-managed Jira content connector. It reads config.yml for the
+  # connector id and API key that Probe's provisioning step generates, so start
+  # it after provisioning once.
+  connectors:
+    image: docker.elastic.co/integrations/elastic-connectors:9.0.1
+    container_name: probe-connectors
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: /app/bin/elastic-ingest -c /config/config.yml
+    volumes:
+      - ./connectors-config:/config
+    restart: unless-stopped
+
+volumes:
+  es-data:

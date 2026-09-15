@@ -1,0 +1,23 @@
+# Secrets and local state
+.env
+*.env.local
+probe-state.json
+connectors-config/config.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

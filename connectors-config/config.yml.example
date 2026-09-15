@@ -1,0 +1,11 @@
+# Copy to config.yml and paste in the API key from Probe's provisioning step.
+# From inside Docker, host.docker.internal reaches an Elasticsearch running on
+# the host; use http://elasticsearch:9200 when both run in this compose file.
+elasticsearch:
+  host: http://elasticsearch:9200
+  api_key: <ELASTICSEARCH_API_KEY_FROM_PROVISIONING>
+
+connectors:
+  - connector_id: probe-jira-connector
+    service_type: jira
+    api_key: <ELASTICSEARCH_API_KEY_FROM_PROVISIONING>
