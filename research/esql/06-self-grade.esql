@@ -1,0 +1,45 @@
+// ============================================================================
+// PROBE — STAGE 5: SELF-GRADING AGAINST FLAGD GROUND TRUTH
+// ----------------------------------------------------------------------------
+// This is the number that goes on screen. It is the whole pitch.
+//
+// probe-ground-truth (lookup mode): one doc per injected fault.
+//   run_id, flag_name, flag_variant, expected_root_svc, injected_at
+// probe-verdicts: one doc per incident PROBE produced.
+//   run_id, incident_id, predicted_root_svc, confidence, detected_at, escalated
+//
+// Honest accounting rules baked in below:
+//   - An ESCALATED (low-confidence) incident is NOT counted as correct, even if
+//     the guess happened to be right. PROBE only gets credit for answers it
+//     actually stood behind.
+//   - It is scored separately as `escalated`, so the panel can see PROBE knew
+//     when it did not know. That is a feature, not a miss.
+// ============================================================================
+
+FROM probe-verdicts
+| WHERE run_id == ?run_id
+
+| EVAL flag_name = injected_flag
+| LOOKUP JOIN probe-ground-truth ON flag_name
+
+| EVAL outcome = CASE(
+      escalated == true,                         "escalated_to_human",
+      predicted_root_svc == expected_root_svc,   "correct",
+                                                 "incorrect")
+
+// Time-to-verdict, in seconds, from fault injection to PROBE's answer.
+| EVAL ttd_seconds = DATE_DIFF("seconds", injected_at, detected_at)
+
+| STATS incidents   = COUNT(*),
+        correct     = COUNT(CASE(outcome == "correct", 1, null)),
+        incorrect   = COUNT(CASE(outcome == "incorrect", 1, null)),
+        escalated   = COUNT(CASE(outcome == "escalated_to_human", 1, null)),
+        mean_ttd_s  = AVG(ttd_seconds),
+        p95_ttd_s   = PERCENTILE(ttd_seconds, 95)
+
+| EVAL accuracy_pct        = ROUND(100.0 * correct / incidents, 1),
+       // Of the answers PROBE actually committed to (excluding escalations):
+       precision_when_answered_pct = ROUND(100.0 * correct / (correct + incorrect), 1)
+
+| KEEP incidents, correct, incorrect, escalated,
+       accuracy_pct, precision_when_answered_pct, mean_ttd_s, p95_ttd_s

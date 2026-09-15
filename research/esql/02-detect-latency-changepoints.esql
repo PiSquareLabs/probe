@@ -1,0 +1,32 @@
+// ============================================================================
+// PROBE — STAGE 1b: per-service LATENCY change-point detection
+// ----------------------------------------------------------------------------
+// Separate query from 1a deliberately: CHANGE_POINT takes ONE metric, and
+// chaining two CHANGE_POINT commands in a single pipeline is [UNTESTED].
+// Latency-only faults exist in the flagd catalogue (intlShippingSlowdown,
+// imageSlowLoad, productCatalogLockContention) and would be MISSED by 1a alone.
+// ============================================================================
+
+FROM traces-*.otel-*
+| WHERE @timestamp >= NOW() - 20 minutes AND kind == "Server"
+
+// `duration` is LONG NANOSECONDS in EDOT otel-native mode. There is no
+// transaction.duration.us here — that is classic APM/ECS. Divide by 1e6 for ms.
+// Getting this wrong makes every latency number wrong by 1000x. [F3]
+| EVAL svc = resource.attributes.service.name
+
+| STATS p95_ns = PERCENTILE(duration, 95),
+        calls  = COUNT(*)
+    BY ts = BUCKET(@timestamp, 10 seconds), svc
+
+| WHERE calls >= 5
+| EVAL p95_ms = p95_ns / 1000000.0
+
+| CHANGE_POINT p95_ms ON ts BY svc AS cp_type, cp_pvalue
+
+| WHERE cp_type IS NOT NULL
+    AND cp_type IN ("spike", "step_change", "trend_change", "distribution_change")
+
+| EVAL signal = "latency_p95"
+| KEEP svc, ts, signal, p95_ms, cp_type, cp_pvalue
+| SORT ts ASC, cp_pvalue ASC

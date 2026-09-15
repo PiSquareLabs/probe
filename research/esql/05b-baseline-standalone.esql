@@ -1,0 +1,17 @@
+// ============================================================================
+// PROBE — FALLBACK for 05 if CHANGE_POINT is rejected inside a FORK branch.
+// Run this and 01-detect-error-changepoints.esql side by side on screen.
+// Identical prefix, so the inputs are still provably the same rows.
+// ============================================================================
+FROM traces-*.otel-*
+| WHERE @timestamp >= NOW() - 20 minutes AND kind == "Server"
+| EVAL svc      = resource.attributes.service.name,
+       is_error = CASE(status.code == "Error", 1, 0)
+| STATS errors = SUM(is_error), calls = COUNT(*)
+    BY ts = BUCKET(@timestamp, 10 seconds), svc
+| WHERE calls >= 5
+| EVAL error_rate = errors::double / calls::double
+| WHERE error_rate > 0.05
+| STATS alerts = COUNT(*), first_fired = MIN(ts) BY svc
+| EVAL method = "threshold_baseline", role = "symptom (cause unknown)"
+| SORT first_fired ASC

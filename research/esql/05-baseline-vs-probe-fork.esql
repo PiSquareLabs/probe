@@ -1,0 +1,43 @@
+// ============================================================================
+// PROBE — THE HEAD-TO-HEAD DEMO MOMENT (one query, two branches, same input)
+// ----------------------------------------------------------------------------
+// FORK runs multiple branches over THE SAME INPUT ROWS and tags each with a
+// `_fork` discriminator. [F8] That makes the comparison provably apples-to-
+// apples: the audience can see the baseline and PROBE were fed identical data,
+// which two separate queries could never demonstrate.
+//
+// FORK: GA 9.4+, max 8 branches, only ONE FORK per query. [F8]
+//
+// ⚠ [UNTESTED] Whether CHANGE_POINT is permitted INSIDE a FORK branch is not
+// documented. Day-0 item D0-9. If it is not, fall back to running the two
+// queries separately and showing them side by side — the fallback is in
+// 05b-baseline-standalone.esql and loses nothing except elegance.
+// ============================================================================
+
+FROM traces-*.otel-*
+| WHERE @timestamp >= NOW() - 20 minutes AND kind == "Server"
+| EVAL svc      = resource.attributes.service.name,
+       is_error = CASE(status.code == "Error", 1, 0)
+| STATS errors = SUM(is_error), calls = COUNT(*)
+    BY ts = BUCKET(@timestamp, 10 seconds), svc
+| WHERE calls >= 5
+| EVAL error_rate = errors::double / calls::double
+
+| FORK
+    // --- fork1: THE BASELINE any on-call team already has -------------------
+    // A static threshold. It fires on every service whose error rate crosses
+    // 5%. It has no notion of cause: it reports SYMPTOMS.
+    ( WHERE error_rate > 0.05
+    | STATS alerts = COUNT(*), first_fired = MIN(ts) BY svc
+    | EVAL method = "threshold_baseline", role = "symptom (cause unknown)" )
+
+    // --- fork2: PROBE's statistical detection -------------------------------
+    // No threshold at all. Detects the moment the distribution CHANGED, which
+    // is what makes ordering — and therefore causality — available.
+    ( CHANGE_POINT error_rate ON ts BY svc AS cp_type, cp_pvalue
+    | WHERE cp_type IS NOT NULL
+    | STATS alerts = COUNT(*), first_fired = MIN(ts) BY svc
+    | EVAL method = "probe_change_point", role = "ranked for causality" )
+
+| SORT _fork, first_fired ASC
+| KEEP _fork, method, svc, first_fired, alerts, role

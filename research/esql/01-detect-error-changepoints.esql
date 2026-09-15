@@ -1,0 +1,45 @@
+// ============================================================================
+// PROBE — STAGE 1a: per-service ERROR-RATE change-point detection
+// ----------------------------------------------------------------------------
+// Tags: [DOCUMENTED] field names + command syntax (see research/01-VERIFIED-FACTS.md
+//       F1,F3,F4); [UNTESTED] end-to-end execution on a live cluster.
+// Requires: stack >= 9.5 (CHANGE_POINT ... BY), PLATINUM or TRIAL licence.
+// Window arithmetic: 20 min / 10 s = 120 buckets per service.
+//   CHANGE_POINT needs >= 22 values per series and ignores beyond 1000.  [F1]
+// ============================================================================
+
+FROM traces-*.otel-*
+
+// `kind` is "Server" in EDOT otel-native mode — NOT "SPAN_KIND_SERVER". [F4]
+// Server spans = inbound work handled BY this service, so one row per request
+// the service actually served.
+| WHERE @timestamp >= NOW() - 20 minutes AND kind == "Server"
+
+// `status.code` is ABSENT when OTel status is Unset, so a `!= "Error"` filter
+// would silently drop healthy spans. CASE falls through to 0 on a null
+// condition ("returns the value that belongs to the FIRST condition that
+// evaluates to true"), which is exactly what we want. [F3, CASE docs]
+| EVAL svc      = resource.attributes.service.name,
+       is_error = CASE(status.code == "Error", 1, 0)
+
+| STATS errors = SUM(is_error),
+        calls  = COUNT(*)
+    BY ts = BUCKET(@timestamp, 10 seconds), svc
+
+// Guard against divide-by-zero and against noisy micro-samples.
+| WHERE calls >= 5
+| EVAL error_rate = errors::double / calls::double
+
+// CHANGE_POINT emits EVERY row, with type/pvalue NULL except at the change
+// point itself — so the WHERE below is mandatory, not cosmetic. [F1 test spec]
+| CHANGE_POINT error_rate ON ts BY svc AS cp_type, cp_pvalue
+
+| WHERE cp_type IS NOT NULL
+    AND cp_type IN ("spike", "step_change", "trend_change", "distribution_change")
+
+| EVAL signal = "error_rate"
+| KEEP svc, ts, signal, error_rate, cp_type, cp_pvalue
+
+// pvalue can be EXACTLY 0.0 for strong changes, so it ties. Time is the
+// primary key of the causal argument; pvalue is only the tiebreak. [F1]
+| SORT ts ASC, cp_pvalue ASC

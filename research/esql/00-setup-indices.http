@@ -1,0 +1,147 @@
+// ============================================================================
+// PROBE — Day-0 SETUP. Run top to bottom in Kibana Dev Tools.
+// Every LOOKUP JOIN target MUST be `index.mode: lookup` (single-shard). [F5]
+// ============================================================================
+
+// --- 0. PRE-FLIGHT: the two things that silently kill the demo ---------------
+GET /
+// -> confirm version.number >= 9.5.0  (CHANGE_POINT ... BY requires it) [F1]
+
+GET /_license
+// -> confirm "type" is platinum, enterprise or trial.
+//    CHANGE_POINT REQUIRES A PLATINUM LICENCE. On basic it errors out. [F1]
+POST /_license/start_trial?acknowledge=true
+// -> 30-day platinum. Do this EARLY; a trial started on stage is a lost demo.
+
+// --- 1. Service dependency graph (directed edges) ----------------------------
+PUT /probe-service-graph
+{
+  "settings": { "index.mode": "lookup" },
+  "mappings": { "properties": {
+    "caller": { "type": "keyword" },
+    "callee": { "type": "keyword" },
+    "calls":  { "type": "long"    }
+  }}
+}
+
+// --- 2. Transitive closure of that graph (for blast radius) ------------------
+// ES|QL has no recursion, so reachability is materialised. Topology changes on
+// deploy timescales, so this is refreshed on a schedule, not per query.
+PUT /probe-service-reachability
+{
+  "settings": { "index.mode": "lookup" },
+  "mappings": { "properties": {
+    "ancestor":   { "type": "keyword" },
+    "descendant": { "type": "keyword" },
+    "hops":       { "type": "integer" }
+  }}
+}
+
+// --- 3. Current anomaly set, written by Stage 1 ------------------------------
+// NOTE the duplicated key: `svc` and `callee` hold the SAME value. LOOKUP JOIN
+// matches on a field of the SAME NAME in both indices, so joining the anomaly
+// set from the callee side needs its own key column. [F5]
+PUT /probe-anomaly-current
+{
+  "settings": { "index.mode": "lookup" },
+  "mappings": { "properties": {
+    "svc":       { "type": "keyword" },
+    "callee":    { "type": "keyword" },
+    "change_ts": { "type": "date"    },
+    "cp_pvalue": { "type": "double"  },
+    "cp_type":   { "type": "keyword" },
+    "signal":    { "type": "keyword" }
+  }}
+}
+
+// Alias used by the second join in 03-causal-rank.esql. An alias is allowed as
+// a LOOKUP JOIN target; a wildcard is not. [F5]
+POST /_aliases
+{ "actions": [ { "add": {
+    "index": "probe-anomaly-current",
+    "alias": "probe-anomaly-current-by-callee" } } ] }
+
+// --- 4. Confirmed roots from Stage 2 ----------------------------------------
+PUT /probe-roots-lookup
+{
+  "settings": { "index.mode": "lookup" },
+  "mappings": { "properties": {
+    "callee":          { "type": "keyword" },
+    "root_svc":        { "type": "keyword" },
+    "root_change_ts":  { "type": "date"    }
+  }}
+}
+
+// --- 5. Ground truth: the flag we flipped -----------------------------------
+PUT /probe-ground-truth
+{
+  "settings": { "index.mode": "lookup" },
+  "mappings": { "properties": {
+    "flag_name":         { "type": "keyword" },
+    "flag_variant":      { "type": "keyword" },
+    "expected_root_svc": { "type": "keyword" },
+    "injected_at":       { "type": "date"    },
+    "run_id":            { "type": "keyword" }
+  }}
+}
+
+// --- 6. Bedrock-backed inference endpoint -----------------------------------
+// task_type `completion` + provider `anthropic`. [F7]
+// ⚠ max_new_tokens DEFAULTS TO 64 and WILL truncate the verdict. Set it. [F7]
+// ⚠ temperature and top_p/top_k are mutually exclusive — send only one. [F7]
+// ⚠ In ap-south-1 Claude is served via CROSS-REGION INFERENCE PROFILES, so
+//    `model` must be a profile id (global./apac. prefix), NOT a bare model id,
+//    or Bedrock returns "on-demand throughput isn't supported". [F10]
+PUT /_inference/completion/probe-bedrock-claude
+{
+  "service": "amazonbedrock",
+  "service_settings": {
+    "access_key": "${AWS_ACCESS_KEY_ID}",
+    "secret_key": "${AWS_SECRET_ACCESS_KEY}",
+    "region":     "ap-south-1",
+    "provider":   "anthropic",
+    "model":      "<CROSS-REGION INFERENCE PROFILE ID — VERIFY ON DAY 0>"
+  },
+  "task_settings": {
+    "max_new_tokens": 1024,
+    "temperature": 0
+  }
+}
+
+POST /_inference/completion/probe-bedrock-claude
+{ "input": "Reply with exactly: PROBE inference endpoint OK" }
+// -> if this truncates or errors, NOTHING downstream works. Test it first.
+
+// --- 7. ELSER-backed runbook corpus (replaces Jina + DiskBBQ) ---------------
+PUT /_inference/sparse_embedding/probe-elser
+{ "service": "elasticsearch",
+  "service_settings": { "model_id": ".elser_model_2", "num_allocations": 1, "num_threads": 1 } }
+
+PUT /probe-runbooks
+{
+  "mappings": { "properties": {
+    "title":       { "type": "text"    },
+    "service":     { "type": "keyword" },
+    "symptom":     { "type": "text"    },
+    "remediation": { "type": "text"    },
+    "rollback":    { "type": "text"    },
+    "body":        { "type": "text"    },
+    "body_semantic": {
+      "type": "semantic_text",
+      "inference_id": "probe-elser"
+    }
+  }}
+}
+
+// --- 8. PROBE's own output ---------------------------------------------------
+PUT /probe-verdicts
+{ "mappings": { "properties": {
+    "run_id":             { "type": "keyword" },
+    "incident_id":        { "type": "keyword" },
+    "predicted_root_svc": { "type": "keyword" },
+    "injected_flag":      { "type": "keyword" },
+    "confidence":         { "type": "double"  },
+    "escalated":          { "type": "boolean" },
+    "detected_at":        { "type": "date"    },
+    "evidence":           { "type": "object", "enabled": false }
+}}}

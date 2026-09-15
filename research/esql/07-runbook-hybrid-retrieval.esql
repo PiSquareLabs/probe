@@ -1,0 +1,47 @@
+// ============================================================================
+// PROBE — STAGE 4a: RUNBOOK RETRIEVAL (hybrid, Elastic-native)
+// ----------------------------------------------------------------------------
+// ⚠ COMPLIANCE + CREDIBILITY CHANGE vs the submitted deck.
+//
+// The deck lists "DiskBBQ + Jina AI" for retrieval. Two problems:
+//   1. Jina AI is a THIRD-PARTY vendor in the core loop. The rules say Elastic +
+//      AWS only. This is a compliance risk, not a scoring one. CUT IT.
+//   2. DiskBBQ (`index_options.type: bbq_disk`) is a disk-based ANN algorithm
+//      built for BILLION-scale, memory-constrained vector search. A runbook
+//      corpus is ~100 documents. Using it there is not "advanced", it is a
+//      wrong-tool choice a search-company judge will spot instantly, and there
+//      is no good answer to "why?".
+//
+// ✅ Use ELSER via `semantic_text` instead: Elastic's own sparse retrieval
+//    model, runs INSIDE Elasticsearch (no external API call at all), and
+//    sparse term expansion is INSPECTABLE — you can show which terms matched,
+//    which is exactly the explainability story PROBE needs.
+//
+// Retrieval runs as a `_search` with an RRF retriever (below), NOT in ES|QL —
+// ES|QL full-text/semantic surface is narrower. Shown here for completeness.
+// ============================================================================
+//
+// POST probe-runbooks/_search
+// {
+//   "retriever": {
+//     "rrf": {
+//       "retrievers": [
+//         { "standard": { "query": { "match": {
+//             "body": "product-catalog elevated error rate gRPC failure" } } } },
+//         { "standard": { "query": { "semantic": {
+//             "field": "body_semantic",
+//             "query": "product-catalog is returning errors to its callers" } } } }
+//       ],
+//       "rank_window_size": 50,
+//       "rank_constant": 20
+//     }
+//   },
+//   "size": 3,
+//   "_source": ["title", "service", "symptom", "remediation", "rollback"]
+// }
+//
+// Why hybrid and not pure semantic: service names ("product-catalog"),
+// error codes and flag names are EXACT tokens. Lexical BM25 nails those;
+// ELSER handles the paraphrase ("catalogue service is throwing"). RRF merges
+// them without tuning a score threshold, which is the part that would
+// otherwise need hand-waving on stage.

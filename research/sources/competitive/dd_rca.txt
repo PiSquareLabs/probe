@@ -1,0 +1,4088 @@
+
+Watchdog RCA
+For AI agents: A markdown version of this page is available at 
+https://docs.datadoghq.com/watchdog/rca.md
+.
+A documentation index is available at 
+/llms.txt
+.
+Home
+Docs
+API
+Agents
+Essentials
+Getting Started
+Agent
+API
+APM Tracing
+Containers
+Autodiscovery
+Datadog Operator
+Dashboards
+Database Monitoring
+Datadog
+Datadog Site
+DevSecOps
+Incident Management
+Integrations
+AWS
+Azure
+Google Cloud
+OCI
+Terraform
+Internal Developer Portal
+Logs
+Monitors
+Notebooks
+OpenTelemetry
+Profiler
+Search
+Product-Specific Search
+Session Replay
+Security
+App and API Protection
+Cloud Security
+Cloud SIEM
+Code Security
+Serverless for AWS Lambda
+Software Delivery
+CI Visibility
+Feature Flags
+Test Optimization
+Test Impact Analysis
+MCP Tools
+Synthetic Monitoring and Testing
+API Tests
+Browser Tests
+Mobile App Tests
+Continuous Testing
+Private Locations
+Tags
+Assigning Tags
+Unified Service Tagging
+Using Tags
+Teams
+Workflow Automation
+Access for Enterprises
+Choosing Your Datadog Topology
+Permissions and Feature Access
+Assigning Users to Roles and Teams
+Protecting Assets
+Protecting Sensitive Data
+Credential Management
+Creating Access Policies
+Sharing Across Organizations
+Example Implementations
+Learning Center
+Support
+Glossary
+Standard Attributes
+Guides
+Agent
+Architecture
+IoT
+Supported Platforms
+AIX
+Linux
+Ansible
+Chef
+Heroku
+MacOS
+Puppet
+SaltStack
+SCCM
+Windows
+From Source
+Log Collection
+Log Agent tags
+Advanced Configurations
+Proxy
+Transport
+Multi-Line Detection
+Configuration
+Commands
+Configuration Files
+Log Files
+Status Page
+Network Traffic
+Proxy Configuration
+FIPS Compliance
+Dual Shipping
+Secrets Management
+Fleet Automation
+Fleet View
+Configure Agents
+Configure Agent Integrations
+Configure Custom Logs
+Upgrade Agents
+Upgrade SDKs
+Troubleshooting
+Container Hostname Detection
+Debug Mode
+Agent Flare
+Agent Check Status
+NTP Issues
+Permission Issues
+Integrations Issues
+Site Issues
+Autodiscovery Issues
+Windows Container Issues
+Agent Runtime Configuration
+High CPU or Memory Consumption
+Guides
+Data Security
+Integrations
+Guides
+Client SDKs
+Setup
+Advanced Configuration
+Data Collected
+Integrated Libraries
+Troubleshooting
+Extend Datadog
+Authorization
+OAuth2 in Datadog
+Authorization Endpoints
+DogStatsD
+Datagram Format
+Unix Domain Socket
+High Throughput Data
+Data Aggregation
+DogStatsD Mapper
+Custom Checks
+Writing a Custom Agent Check
+Writing a Custom OpenMetrics Check
+Integrations
+Build an Integration with Datadog
+Create an Agent-based Integration
+Create an API-based Integration
+Create a Log Pipeline
+Integration Assets Reference
+Build a Marketplace Offering
+Create an Integration Dashboard
+Create a Monitor Template
+Create a Cloud SIEM Detection Rule
+Install Agent Integration Developer Tool
+Service Checks
+Submission - Agent Check
+Submission - DogStatsD
+Submission - API
+Community
+Libraries
+Guides
+OpenTelemetry
+Getting Started
+Datadog Example Application
+OpenTelemetry Demo Application
+Feature Compatibility
+Instrument Your Applications
+Using OTel SDK
+Using Datadog SDK
+Send Data to Datadog
+DDOT Collector (Recommended)
+OpenTelemetry Collector
+OTLP Ingest in the Agent
+Direct OTLP Ingest
+Semantic Mapping
+Resource Attribute Mapping
+Metrics Mapping
+Infrastructure Host Mapping
+Hostname Mapping
+Service-entry Spans Mapping
+Ingestion Sampling
+Correlate Data
+Logs and Traces
+Metrics and Traces
+RUM and Traces
+DBM and Traces
+Integrations
+Apache Metrics
+Apache Spark Metrics
+Collector Health Metrics
+Datadog Extension
+Docker Metrics
+HAProxy Metrics
+Host Metrics
+IIS Metrics
+Kafka Metrics
+Kubernetes Metrics
+MySQL Metrics
+PostgreSQL Metrics
+NGINX Metrics
+Podman Metrics
+Runtime Metrics
+SQL Server Metrics
+Trace Metrics
+Troubleshooting
+Guides and Resources
+Produce Delta Temporality Metrics
+Visualize Histograms as Heatmaps
+Instrument Unsupported Runtimes
+Migration Guides
+Reference
+Terms and Concepts
+Trace Context Propagation
+Trace IDs
+OTLP Metric Types
+Administrator's Guide
+Getting Started
+Plan
+Build
+Run
+API
+Command Line
+MCP Server
+Setup
+MCP Tools
+Partners
+Datadog Mobile App
+Enterprise Configuration
+Datadog for Intune
+Shortcut Configurations
+Push Notifications
+Widgets
+Guides
+DDSQL Reference
+Data Directory
+CoTerm
+Install
+Using CoTerm
+Configuration Rules
+Remote Configuration
+Cloudcraft (Standalone)
+Getting Started
+Account Management
+Components: Common
+Components: Azure
+Components: AWS
+Advanced
+FAQ
+API
+AWS Accounts
+Azure Accounts
+Blueprints
+Budgets
+Teams
+Users
+In The App
+Dashboards
+Configure
+Dashboard List
+Widgets
+Configuration
+Widget Types
+Querying
+Functions
+Algorithms
+Arithmetic
+Count
+Exclusion
+Interpolation
+Rank
+Rate
+Regression
+Rollup
+Smoothing
+Telemetry Source
+Timeshift
+Beta
+Graph Insights
+Metric Correlations
+Investigate Anomalies
+Watchdog Explains
+Template Variables
+Overlays
+Annotations
+Guides
+Sharing
+Shared Dashboards
+Widget Share URLs
+Secure Embedded Dashboards
+Share Graphs
+Scheduled Reports
+Notebooks
+Analysis Features
+Getting Started
+Guides
+DDSQL Editor
+Reference Tables
+Sheets
+Functions and Operators
+Guides
+Monitors and Alerting
+Draft Monitors
+Configure Monitors
+Monitor Templates
+Monitor Types
+Notifications
+Notification Rules
+Variables
+Downtimes
+Examples
+Manage Monitors
+Search Monitors
+Check Summary
+Monitor Status
+Status Graphs
+Status Events
+Monitor Settings
+Monitor Quality
+Guides
+Service Level Objectives
+Monitor-based SLOs
+Metric-based SLOs
+Time Slice SLOs
+Error Budget Alerts
+Burn Rate Alerts
+Guides
+Metrics
+Custom Metrics
+Metric Type Modifiers
+Historical Metrics Ingestion
+Submission - Agent Check
+Submission - DogStatsD
+Submission - Powershell
+Submission - API
+OpenTelemetry Metrics
+OTLP Metric Types
+Query OpenTelemetry Metrics
+Metrics Types
+Distributions
+Overview
+Explorer
+Metrics Units
+Summary
+Volume
+Advanced Filtering
+Nested Queries
+Reference Table Joins with Metrics
+Derived Metrics
+Metrics Without Limits™
+Guides
+Watchdog
+Alerts
+Impact Analysis
+RCA
+Insights
+Faulty Deployment Detection
+Faulty Cloud & SaaS API Detection
+Bits AI
+Bits Investigation
+Investigate Issues
+Bits Investigation Integrations and Settings
+Knowledge Sources
+Chat with Bits Investigation
+Bits Remediation
+Bits Detection
+Bits Code
+Setup
+Automations
+Bits Security Analyst
+Bits Chat
+Bits Agent Builder
+Bits Data Analysis
+Skills Library
+Internal Developer Portal
+Catalog
+Set Up
+Entity Model
+Troubleshooting
+Scorecards
+Scorecard Configuration
+Custom Rules
+Using Scorecards
+Self-Service Actions
+Software Templates
+Engineering Reports
+Teams Performance
+Reliability Overview
+Catalog Health
+Scorecards Performance
+DORA Metrics
+Custom Reports
+Homepage
+Campaigns
+External Provider Status
+Integrations
+Use Cases
+API Management
+Cloud Cost Management
+App and API Protection
+Developer Onboarding
+Dependency Management
+Production Readiness
+Incident Response
+CI Pipeline Visibility
+Onboarding Guide
+Error Tracking
+Explorer
+Issue States
+Regression Detection
+Suspected Causes
+Error Grouping
+Bits Code
+Monitors
+Identify Suspect Commits
+Auto Assign
+Issue Team Ownership
+Track Browser and Mobile Errors
+Browser Error Tracking
+Collecting Browser Errors
+Mobile Crash Tracking
+Replay Errors
+Real User Monitoring
+Logs
+Track Backend Errors
+Getting Started
+Exception Replay
+Capturing Handled Errors
+APM
+Logs
+Manage Data Collection
+Ticketing Systems
+Jira
+Linear
+Work Management
+Link Pull Requests
+Troubleshooting
+Guides
+Change Tracking
+Feature Flags
+Event Management
+Ingest Events
+Pipelines and Processors
+Aggregation Key Processor
+Arithmetic Processor
+Date Remapper
+Category Processor
+Grok Parser
+Lookup Processor
+Remapper
+Service Remapper
+Status Remapper
+String Builder Processor
+Explorer
+Searching
+Navigate the Explorer
+Customization
+Facets
+Attributes
+Notifications
+Analytics
+Saved Views
+Triage Inbox
+Correlation
+Configuration
+Triaging & Notifying
+Analytics
+Maintenance Windows
+Guides
+Incident Response
+Incident Management
+Incident Investigation
+Declare an Incident
+Describe an Incident
+Response Team
+Notification
+Timeline
+Incident AI
+Setup and Configuration
+Information
+Property Fields
+Transition Forms
+Responder Types
+Automations
+Notification Rules
+Templates
+Variables
+Integrations
+Post Incident
+Follow-ups
+Postmortems
+Analytics and Reporting
+Guides
+On-Call
+Onboard a Team
+Pages
+Live Call Routing
+Cross-org Paging
+Routing Rules
+Escalation Policies
+Schedules
+Handover automation
+Notification Preferences
+Supported Countries
+Guides
+Status Pages
+Work Management
+Projects
+Settings
+Create a Work Item
+Customization
+View and Manage Work Items
+Notifications and Integrations
+Work Item Automation Rules
+Work Item Approvals
+AI Tools
+Custom Agents
+Troubleshooting
+Actions & Remediations
+Bits Agent Builder
+Workflow Automation
+Build Workflows
+Access and Authentication
+Trigger Workflows
+Variables and parameters
+Actions
+Workflow Logic
+Save and Reuse Actions
+Test and Debug
+Expressions
+Track Workflows
+Limits
+MCP Tools
+Apps
+App Builder
+Build Apps
+Access and Authentication
+Queries
+Variables
+Events
+Components
+Custom Charts
+React Renderer
+Tables
+Reusable Modules
+JavaScript Expressions
+Embedded Apps
+Input Parameters
+Save and Reuse Actions
+Datastores
+Create and Manage Datastores
+Use Datastores with Apps and Workflows
+Automation Rules
+Access and Authentication
+Forms
+Components
+Responses
+Guides
+Action Catalog
+Connections
+HTTP Request
+Integration Connections
+Google Workspace
+Private Action Credentials
+Private Actions
+Getting Started
+Set Up in the Datadog Agent
+Set Up a Standalone Runner
+Enrollment and Ownership
+Authorize Private Actions
+Execution Policies
+Run a Script
+Reference
+Infrastructure
+Cloudcraft
+Overlays
+Infrastructure
+Observability
+Security
+Cloud Cost Management
+Monitors
+APM
+Resource Catalog
+Cloud Resources Schema
+Policies
+Resource Changes
+Universal Service Monitoring
+Setup
+Guides
+End User Device Monitoring
+Setup
+macOS
+Windows
+Hosts
+Host List
+Containers
+Container Monitoring
+Containers Explorer
+Container Images Explorer
+Kubernetes Explorer
+Amazon ECS Explorer
+Autoscaling
+Manifest Reference
+Cluster
+Docker-based
+APM
+Log collection
+Tag extraction
+Integrations
+Prometheus
+Data Collected
+Kubernetes
+Installation
+Migrate to the Datadog Operator
+Further Configuration
+Distributions
+APM
+App and API Protection
+Log collection
+Tag extraction
+Integrations
+Prometheus & OpenMetrics
+Control plane monitoring
+Data collected
+kubectl Plugin
+Datadog CSI Driver
+Data security
+Cluster Agent
+Setup
+Commands & Options
+Cluster Checks
+Endpoint Checks
+Admission Controller
+Amazon ECS
+APM
+Log collection
+Tag extraction
+Data collected
+Managed Instances
+AWS Fargate with ECS
+Datadog Operator
+Migrate to the Datadog Operator
+Advanced Install
+Configuration
+Datadog Agent Profiles
+Providers
+Custom Checks
+Data Collected
+Secret Management
+DatadogDashboard CRD
+DatadogGenericResource CRD
+DatadogMonitor CRD
+DatadogSLO CRD
+Troubleshooting
+Duplicate hosts
+Cluster Agent
+Cluster Checks
+HPA and Metrics Provider
+Admission Controller
+Log Collection
+Guides
+Processes
+Increase Process Retention
+Serverless
+AWS
+AWS Lambda
+AWS Step Functions
+AWS Fargate
+Azure
+Azure App Service
+Azure Container Apps
+Azure Database & Messaging Services
+Azure Functions
+Azure Logic Apps
+Google
+Cloud Run Containers
+Cloud Run Jobs (Preview)
+Cloud Run Functions
+Cloud Run Functions (1st generation)
+Libraries & Integrations
+Glossary
+Guides
+Network Monitoring
+Cloud Network Monitoring
+Setup
+Network Health
+Network Analytics
+Network Map
+Guides
+Supported Cloud Services
+Terms and Concepts
+DNS Monitoring
+Network Device Monitoring
+Setup
+Summary Page
+Integrations
+Profiles
+Configuration Management
+Maps
+SNMP Metrics Reference
+Troubleshooting
+Guides
+Terms and Concepts
+NetFlow Monitoring
+Monitors
+Network Path
+Setup
+List View
+Path View
+Autonomous Systems View
+Monitors
+Guides
+Terms and Concepts
+Storage Management
+Amazon S3
+Google Cloud Storage
+Azure Blob Storage
+Cloud Cost
+Cloud Cost
+Datadog Costs
+Setup
+Permissions
+AWS
+Azure
+Google Cloud
+Oracle
+SaaS and AI Costs
+Custom
+Tags
+Tag Explorer
+Multisource Querying
+Allocation
+Tag Pipelines
+Container Cost Allocation
+BigQuery Costs
+Custom Allocation Rules
+AI Costs
+Reporting
+Scheduled Reports
+Explorer
+Dashboard
+Recommendations
+Cost Optimization Automations
+Notifications
+Custom Recommendations
+Planning
+Budgets
+Forecasting
+Commitment Programs
+Cost Changes
+Monitors
+Anomalies
+Real-Time Costs
+Cloud Cost Skill
+Application Performance
+APM
+APM Terms and Concepts
+Application Instrumentation
+Single Step Instrumentation
+Manually managed SDKs
+Code-based Custom Instrumentation
+Dynamic Instrumentation
+Library Compatibility
+Library Configuration
+Configuration at Runtime
+Trace Context Propagation
+Serverless Application Tracing
+Proxy Tracing
+Span Tag Semantics
+Span Links
+APM Metrics Collection
+Trace Metrics
+Runtime Metrics
+Trace Pipeline Configuration
+Ingestion Mechanisms
+Ingestion Controls
+Adaptive Sampling
+Processing Pipelines
+Generate Metrics
+Trace Retention
+Usage Metrics
+Correlate Traces with Other Telemetry
+Correlate DBM and Traces
+Correlate Logs and Traces
+Correlate RUM and Traces
+Correlate Synthetics and Traces
+Correlate Profiles and Traces
+Trace Explorer
+Search Spans
+Query Syntax
+Trace Queries
+Span Tags and Attributes
+Span Visualizations
+Trace View
+Tag Analysis
+Recommendations
+Code Origin for Spans
+Service Observability
+Catalog
+Service Page
+Resource Page
+Deployment Tracking
+Service Map
+Inferred Services
+Service Remapping Rules
+Tag Enrichment
+Integration Override Removal
+APM Monitors
+Endpoint Observability
+Explore Endpoints
+Monitor Endpoints
+Live Debugger
+Bits Live Debugger
+Error Tracking
+Issue States
+Error Tracking Explorer
+Error Grouping
+Stack Traces
+Monitors
+Identify Suspect Commits
+Exception Replay
+Troubleshooting
+Data Security
+Guides
+Troubleshooting
+Agent Rate Limits
+Agent APM metrics
+Agent Resource Usage
+Correlated Logs
+PHP 5 Deep Call Stacks
+.NET diagnostic tool
+APM Quantization
+Go Compile-Time Instrumentation
+Tracer Startup Logs
+Tracer Debug Logs
+Connection Errors
+SDK Configurations
+Continuous Profiler
+Enabling the Profiler
+Supported Language and SDK Versions
+Profile Types
+Profile Visualizations
+Investigate Slow Traces or Endpoints
+Compare Profiles
+Automated Analysis
+Profiler Troubleshooting
+Java
+Python
+Go
+Ruby
+Node.js
+.NET
+PHP
+C/C++/Rust
+Guides
+Database Monitoring
+Agent Integration Overhead
+Setup Architectures
+Setting Up Postgres
+Self-hosted
+RDS
+Aurora
+Google Cloud SQL
+AlloyDB
+Azure
+Supabase
+Heroku
+Advanced Configuration
+Troubleshooting
+Setting Up MySQL
+Self-hosted
+RDS
+Aurora
+Google Cloud SQL
+Azure
+Advanced Configuration
+Troubleshooting
+Setting Up SQL Server
+Self-hosted
+RDS
+Azure
+Google Cloud SQL
+Troubleshooting
+Setting Up Oracle
+Self-hosted
+RDS
+RAC
+Exadata
+Autonomous Database
+Troubleshooting
+Setting Up Amazon DocumentDB
+Amazon DocumentDB
+Troubleshooting
+Setting Up MongoDB
+Self-hosted
+MongoDB Atlas
+Troubleshooting
+Setting Up ClickHouse
+Self-hosted
+ClickHouse Cloud
+Connecting DBM and Traces
+Data Collected
+Provision the Agent with Terraform
+Collecting Custom Metrics
+Exploring Custom Metrics
+Exploring Database Hosts
+Exploring Query Metrics
+Exploring Query Samples
+Exploring Database Schemas
+Exploring Recommendations
+Database Investigations in Bits Chat
+Bits Database Optimization
+Troubleshooting
+Guides
+Data Streams Monitoring
+Setup
+Kafka Console
+Setup
+Data Collection
+Monitors and Automation
+Schema Tracking
+Dead Letter Queues
+Metrics and Tags
+Data Observability
+Data Observability Overview
+Data Catalog
+Lineage
+Quality Monitoring
+Data Warehouses
+Snowflake
+Databricks
+BigQuery
+Redshift
+Data Lakes
+Iceberg Tables (AWS Glue)
+Transactional Databases
+PostgreSQL
+ELT Integrations
+Airbyte
+Fivetran
+Hightouch
+Business Intelligence Integrations
+Hex
+Looker
+Tableau
+Sigma
+Metabase
+Power BI
+Jobs Monitoring
+Databricks
+Private Link Connectivity
+Airflow
+Logs Correlation
+Troubleshooting DAG
+Upgrade OpenLineage Provider on Amazon MWAA
+dbt
+Spark on Kubernetes
+Spark on Amazon EMR
+Spark on Google Dataproc
+AWS Glue
+Azure Data Factory
+Custom Jobs (OpenLineage)
+Datadog Agent for OpenLineage Proxy
+CI/CD
+Integration Overhead
+Digital Experience
+Journey Monitoring
+Map
+Suggested Journeys
+Details Report
+Variants
+Uptime
+Roles and Permissions
+Guides
+Real User Monitoring
+Application Monitoring
+Browser
+Android and Android TV
+Apple Platforms
+Flutter
+Kotlin Multiplatform
+C / C++
+React Native
+Roku
+Unity
+.NET MAUI
+Platform
+Dashboards
+Monitors
+Generate Custom Metrics
+Exploring RUM Data
+Search RUM Events
+Search Syntax
+Group
+Visualize
+Events
+Export
+Saved Views
+Watchdog Insights for RUM
+Correlate RUM with Other Telemetry
+Correlate LLM with RUM
+Correlate Logs with RUM
+Correlate Profiling with RUM
+Correlate Synthetics with RUM
+Correlate Traces with RUM
+Feature Flag Tracking
+Setup
+Using Feature Flags
+Error Tracking
+Explorer
+Issue States
+Track Browser Errors
+Track Mobile Errors
+Error Grouping
+Monitors
+Identify Suspect Commits
+Troubleshooting
+AI Investigations
+Single-View AI Investigation
+Multi-View AI Investigation
+Operation AI Investigation
+RUM Without Limits
+Metrics
+Retention Filters
+Retention Quotas
+Operations Monitoring
+Managed Archive
+Export Pipelines
+Ownership of Views
+Guides
+Data Security
+Synthetic Testing and Monitoring
+API Testing
+HTTP
+SSL
+DNS
+WebSocket
+TCP
+UDP
+ICMP
+GRPC
+Error codes
+Multistep API Testing
+Browser Testing
+Recording Steps
+Browser Testing Results
+Advanced Options for Steps
+Authentication in Browser Testing
+Network Path Testing
+Terms and Concepts
+Mobile Application Testing
+Testing Steps
+Testing Results
+Advanced Options for Steps
+Supported Devices
+Restricted Networks
+Settings
+Test Suites
+Bits Testing
+Goal-Based Testing
+Platform
+Dashboards
+Metrics
+Test Coverage
+Private Locations
+Connect APM
+Settings
+Scheduled Downtime
+Exploring Synthetics Data
+Saved Views
+Results Explorer
+Guides
+Notifications
+Template Variables
+Conditional Alerting
+Advanced Notifications
+Integrate with Statuspage
+Troubleshooting
+Data Security
+Continuous Testing
+Local and Staging Environments
+Testing Multiple Environments
+Testing With Proxy, Firewall, or VPN
+CI/CD Integrations
+Configuration
+Azure DevOps Extension
+CircleCI Orb
+GitHub Actions
+GitLab
+Jenkins
+Bitrise (Upload Application)
+Bitrise (Run Tests)
+Settings
+Results Explorer
+Metrics
+Guides
+Troubleshooting
+Experiments
+Create Experiment Metrics
+Sync Metrics from YAML
+Standardize Experiments with Protocols
+Plan and Launch Experiments
+Read Experiment Results
+Experiment Diagnostics
+Concepts
+Subject Types
+Exposure SQL Models
+SQL Template Variables
+Cumulative Impact
+Statistics
+Analysis Methods
+CUPED: Variance Reduction Technique
+Minimum Detectable Effects
+Multiple Testing Correction
+Global Lift
+Break Out Metrics by Property
+Troubleshooting
+Experiments MCP Tools
+Guides
+Product Analytics
+Charts
+Chart Basics
+Funnel
+Journey Paths
+Pathways
+Retention
+Analytics
+Dashboards
+Segments
+Action Management
+Managing Profiles
+Identity Resolution
+Data Collected
+Server-Side Events
+Export Pipelines
+Usability
+Guides
+Troubleshooting
+Session Replay
+Setup
+Privacy Options
+Developer Tools
+Playlists
+Heatmaps
+Impact on App Performance
+Troubleshooting
+Guides
+Software Delivery
+CI Visibility
+CI/CD Optimization
+Pipeline Visibility
+AWS CodePipeline
+Azure Pipelines
+Buildkite
+CircleCI
+Codefresh
+GitHub Actions
+GitLab
+Jenkins
+TeamCity
+Other CI Providers
+Automatic Job Retries
+Custom Commands
+Custom Tags and Measures
+Search and Manage
+Explorer
+Search Syntax
+Search Pipeline Executions
+Export
+Saved Views
+Monitors
+Guides
+Troubleshooting
+CD Visibility
+Deployment Visibility
+Argo CD
+CI Providers
+Explore Deployments
+Search Syntax
+Facets
+Saved Views
+Features
+Code Changes Detection
+Rollback Detection
+Monitors
+Deployment Gates
+Setup
+Just-In-Time (JIT) Gates
+Preconfigured Gates
+Explore
+Test Optimization
+CI/CD Optimization
+Setup
+.NET
+Java and JVM Languages
+JavaScript and TypeScript
+Python
+Ruby
+Swift
+Go
+JUnit Report Uploads
+Bazel
+Network Settings
+Tests in Containers
+Explorer
+Search Syntax
+Search Test Runs
+Export
+Saved Views
+Monitors
+Test Health
+Flaky Test Management
+Working with Flaky Tests
+Early Flake Detection
+Auto Test Retries
+Test Impact Analysis
+How It Works
+Troubleshooting
+Setup
+Test Parallelization
+Setup
+Configuration
+Best Practices
+Troubleshooting
+Developer Workflows
+Code Coverage
+Instrument Browser Tests with RUM
+Instrument Swift Tests with RUM
+Correlate Logs and Tests
+Guides
+Troubleshooting
+Code Coverage
+Setup
+Configuration
+Coverage Calculation
+Monorepo Support
+Flags
+Carryforward
+Data Collected
+Dashboards
+PR Gates
+Setup
+Delivery Performance
+DORA Metrics
+Setup
+Change Failure Detection
+DORA Metrics Calculation
+Data Collected
+AI Impact
+Feature Flags
+Client SDKs
+Android and Android TV
+Angular
+Dart and Flutter
+iOS and tvOS
+JavaScript
+React
+React Native
+Unity
+Server SDKs
+.NET
+Go
+Java
+Node.js
+PHP
+Python
+Ruby
+Concepts
+Environments
+Variants and Flag Types
+Evaluation Context
+Targeting Rules and Filters
+Targeting Attributes
+Evaluation Tester
+Scheduled Rollouts
+Saved Filters
+Traffic Splitting and Randomization
+Experiments
+Distribution Channels
+Configuration Sources
+Monthly Flag Configuration Requests
+Flag History
+Feature Flag Graphs
+Stale Flags
+Permissions and Access Control
+Approvals
+Use Cases
+Progressive Rollouts and Canaries
+Kill Switches
+Dynamic Configuration
+Implementation Patterns
+Local Flag Overrides
+OpenTelemetry
+Serverless
+Browser Developer Extension
+MCP Server
+Guides
+Developer Integrations
+Source Code Integration
+Source Code Management Providers
+Service Mapping
+.NET
+Go
+Java
+Node.js
+PHP
+Python
+Ruby
+Other Languages
+Resource Mapping
+Features
+IDE Plugins
+JetBrains IDEs
+Code Security
+Error Tracking
+Logs
+VS Code & Cursor
+Code Security
+Code Insights
+Logs
+Exception Replay
+Security
+Security Overview
+Detection Rules
+OOTB Rules
+Notifications
+Rules
+Variables
+Suppressions
+Automation Pipelines
+Modify Severity Level
+Mute
+Set Due Date Rules
+Add to Security Inbox
+Create Tickets
+Security Inbox
+Threat Intelligence
+Events Forwarding
+Audit Trail
+Access Control
+Ticketing Integrations
+Assignee Management
+Research Feed
+Severity Adjustment
+Security MCP Tools
+Guides
+Cloud SIEM
+Ingest and Enrich
+Content Packs
+Bring Your Own Threat Intelligence
+Open Cybersecurity Schema Framework
+Detect and Monitor
+OOTB Rules
+Custom Detection Rules
+Version History
+Suppressions
+Critical Assets
+Historical Jobs
+MITRE ATT&CK Map
+Triage and Investigate
+Investigate Security Signals
+Risk Insights
+IOC Explorer
+Investigator
+Respond and Report
+Security Operational Metrics
+Guides
+Data Security
+Code Security
+Static Code Analysis (SAST)
+Setup
+Configuration
+GitHub Actions
+Generic CI Providers
+AI-Enhanced Static Code Analysis
+SAST Custom Rule Creation Tutorial
+SAST Custom Rules
+SAST Custom Rules Guide
+Static Code Analysis (SAST) rules
+Software Composition Analysis (SCA)
+Static Setup
+Runtime Setup
+Configuration
+Library Inventory
+CVE Explorer
+Secret Scanning
+GitHub Actions
+Generic CI Providers
+Configuration
+Secret Validation
+Runtime Code Analysis (IAST)
+Setup
+Security Controls
+Infrastructure as Code (IaC) Security
+Setup
+Configuration
+GitHub Actions
+Rules
+IaC Custom Rules
+IaC Custom Rule Reference
+Developer Tool Integrations
+Pull Request Comments
+PR Gates
+IDE Plugins
+Git Hooks
+MCP Server
+SCFW GitHub Action
+Troubleshooting
+Guides
+Cloud Security
+Setup
+Supported Deployment Types
+Agentless Scanning
+Deploy the Agent
+Container Image Scanning in CI/CD
+Set Up CloudTrail Logs
+Set Up without Infrastructure Monitoring
+Deploy using Cloud Integrations
+Security Graph
+Misconfigurations
+Manage Compliance Rules
+Create Custom Rules
+Manage Compliance Posture
+Explore Misconfigurations
+Kubernetes Security Posture Management
+Identity Risks
+Vulnerabilities
+Hosts and Containers Compatibility
+Crown Jewels
+OOTB Rules
+Triage and Prioritize
+Runtime Prioritization Engine
+Severity Scoring
+Review and Remediate
+Mute Issues
+Automate Security Workflows
+Remediate with AI
+Ownership Agent
+Set Up Ownership Preferences
+Code Locations
+Guides
+Troubleshooting
+Vulnerabilities
+Agentless Scanning
+App and API Protection
+Terms and Concepts
+How It Works
+Threat Intelligence
+Trace Qualification
+User Monitoring and Protection
+Setup
+API Posture
+Overview
+API Findings
+Compliance
+API Inventory
+Endpoint Scanning
+Sensitive Data
+Threat Protection
+Overview
+Security Signals
+Policies
+Exploit Prevention
+WAF Integrations
+Account Takeover Protection
+Attack Summary
+Guides
+Troubleshooting
+AI Guard
+Get Started with AI Guard
+Set Up AI Guard
+Automatic Integrations
+Manual Integrations
+SDK
+HTTP API
+Security Signals
+Workload Protection
+Setup
+Docker
+Kubernetes
+ECS (EC2 compute)
+Linux
+Fargate
+Windows
+Advanced Configuration
+Detect and Monitor
+Agent Rules
+Detection and Finding Rules
+Threat Intelligence
+Content Packs
+Investigate and Triage
+Agent Events
+Signals
+Findings
+Respond to Threats
+Coverage
+Review and Improve Coverage
+Guides
+Troubleshooting
+Sensitive Data Scanner
+Setup
+Telemetry Data
+Cloud Storage
+Scanning Rules
+Library Rules
+Custom Rules
+Guides
+Troubleshooting
+AI Observability
+Agent Observability
+Quickstart
+Terms and Concepts
+Build with AI
+Instrument
+Automatic
+SDK Reference
+HTTP API
+OpenTelemetry
+Agentic Instrumentation
+Correlate with APM
+Prompt Tracking
+Multimodal
+Investigate
+Querying spans and traces
+Cost
+Metrics
+Patterns
+Evaluations
+Annotation Queues
+Export API
+Improve
+Playground
+Datasets
+Experiments
+Data Access Control
+Configure
+Prompt Management
+Automation Rules
+Data Governance
+Lapdog
+Guides
+GPU Monitoring
+Setup
+Summary Page
+Fleet Page
+Agent Console
+Setup
+Log Management
+Observability Pipelines
+Configuration
+Explore Templates
+Set Up Pipelines
+Pipeline Simulation
+Install the Worker
+Secrets Management
+Live Capture
+Update Existing Pipelines
+Export Pipeline
+Network Traffic
+Access Control
+Sources
+Akamai DataStream
+Amazon Data Firehose
+Amazon S3
+Azure Event Hubs
+Cloudflare Logpush
+Datadog Agent
+Datadog Lambda Extension
+Datadog Lambda Forwarder
+Filebeat
+Fluent
+Google Pub/Sub
+HTTP Client
+HTTP Server
+OpenTelemetry
+Kafka
+Logstash
+MySQL
+Okta
+Socket
+Splunk HEC
+Splunk TCP
+Sumo Logic Hosted Collector
+Syslog
+WebSocket
+Processors
+Add Environment Variables
+Add hostname
+Aggregate
+Custom Processor
+Deduplicate
+Edit fields
+Edit tags
+Enrichment Table
+Filter
+Generate Metrics
+Grok Parser
+Parse JSON
+Parse XML
+Quota
+Reduce
+Remap to OCSF
+Sample
+Sensitive Data Scanner
+Split Array
+Tag Allow/Block List
+Tags
+Tag Cardinality Control
+Throttle
+Destinations
+Amazon OpenSearch
+Amazon S3
+Amazon Security Lake
+Azure Storage
+ClickHouse
+CrowdStrike NG-SIEM
+Databricks (Zerobus)
+Datadog Archives
+Datadog BYOC Logs
+Datadog Logs
+Datadog Metrics
+Elasticsearch
+Google Cloud Storage
+Google Pub/Sub
+Google SecOps
+HTTP Client
+Kafka
+Microsoft Sentinel
+New Relic
+OpenSearch
+SentinelOne
+Socket
+Splunk HEC
+Sumo Logic Hosted Collector
+Syslog
+Packs
+Replay
+Search Syntax
+Scaling and Performance
+Buffering and Backpressure
+Scaling Best Practices
+Monitoring and Troubleshooting
+Worker CLI Commands
+Monitoring Pipelines
+Pipeline Usage Metrics
+Troubleshooting
+Guides and Resources
+Upgrade Worker Guide
+Log Management
+Log Collection & Integrations
+Browser
+Android
+iOS
+Flutter
+React Native
+Roku
+Kotlin Multiplatform
+C / C++
+.NET MAUI
+C#
+Go
+Java
+Node.js
+PHP
+OpenTelemetry
+Python
+Agent Integrations
+Ruby
+Other Integrations
+Log Configuration
+Pipelines
+Processors
+Parsing
+Pipeline Scanner
+Attributes and Aliasing
+Generate Metrics
+Indexes
+Flex Logs
+Archives
+Rehydrate from Archives
+Forwarding
+Log Optimizer
+Log Explorer
+Live Tail
+Search Logs
+Search Syntax
+Advanced Search
+Facets
+Calculated Fields
+Analytics
+Patterns
+Transactions
+Visualize
+Log Side Panel
+Export
+Watchdog Insights for Logs
+Saved Views
+Archive Search
+Findings
+Error Tracking
+Error Tracking Explorer
+Issue States
+Track Browser and Mobile Errors
+Track Backend Errors
+Error Grouping
+Manage Data Collection
+Dynamic Sampling
+Monitors
+Identify Suspect Commits
+Troubleshooting
+Reports
+Guides
+Data Security
+Troubleshooting
+Live Tail
+BYOC Logs
+Introduction
+Architecture
+Network
+Supported Features
+Quickstart
+Install
+AWS EKS
+Azure AKS
+GCP GKE
+Docker (Local)
+Ingest
+Datadog Agent
+Observability Pipelines
+REST API
+Configure
+Indexes
+Ingress
+Lambda Search Offloading
+Operate
+Sizing
+Autoscaling
+Monitoring
+Search Logs
+Production Best Practices
+Disk Buffer Durability
+Releases and Updates
+Troubleshooting
+Guides
+Release Notes
+Administration
+Account Management
+Organization Topology
+Switching Between Orgs
+Organization Settings
+User Management
+Login Methods
+Mobile and Third-Party Access
+Custom Organization Landing Page
+Service Accounts
+IP Allowlist
+Domain Allowlist
+Cross-Organization Visibility
+SMTP Configuration
+Cross-App Access
+Access Control
+Granular Access
+Permissions
+Data Access
+SSO with SAML
+Configuring SAML
+Renewing SAML Certificates
+User Group Mapping
+Active Directory
+Auth0
+Entra ID
+Google
+LastPass
+Okta
+SafeNet
+Troubleshooting
+Delete Data
+SCIM
+Okta
+Microsoft Entra ID
+API and Application Keys
+Personal Access Tokens
+Service Access Tokens
+Teams
+Team Management
+Provision with GitHub
+Governance Console
+Controls
+Multi-Factor Authentication
+Audit Trail
+Events
+Forwarding
+Guides
+Safety Center
+Plan & Usage
+Bill Overview
+Cost Details
+Usage Details
+Partner Experience
+Billing
+Pricing
+Credit Card
+Product Allotments
+Usage Metrics
+Usage Attribution
+Custom Metrics
+Containers
+Log Management
+APM
+Serverless
+Real User Monitoring
+CI Visibility
+Incident Response
+AWS Integration
+Azure Integration
+Google Cloud Integration
+OCI Integration
+Alibaba Integration
+vSphere Integration
+Workflow Automation
+AI Credits
+AI Credit Limits
+Multi-org Accounts
+Organization Groups
+Guides
+Workload Identity Federation
+Disaster Recovery
+Data Security
+Agent
+Cloud SIEM
+Kubernetes
+Log Management
+Real User Monitoring
+Synthetic Monitoring
+Tracing
+PCI Compliance
+HIPAA Compliance
+Data Retention Periods
+Guides
+Help
+Datadog Docs
+Essentials
+Getting Started
+Agent
+API
+APM Tracing
+Containers
+Autodiscovery
+Datadog Operator
+Dashboards
+Database Monitoring
+Datadog
+Datadog Site
+DevSecOps
+Incident Management
+Integrations
+AWS
+Azure
+Google Cloud
+OCI
+Terraform
+Internal Developer Portal
+Logs
+Monitors
+Notebooks
+OpenTelemetry
+Profiler
+Search
+Product-Specific Search
+Session Replay
+Security
+App and API Protection
+Cloud Security
+Cloud SIEM
+Code Security
+Serverless for AWS Lambda
+Software Delivery
+CI Visibility
+Feature Flags
+Test Optimization
+Test Impact Analysis
+MCP Tools
+Synthetic Monitoring and Testing
+API Tests
+Browser Tests
+Mobile App Tests
+Continuous Testing
+Private Locations
+Tags
+Assigning Tags
+Unified Service Tagging
+Using Tags
+Teams
+Workflow Automation
+Access for Enterprises
+Choosing Your Datadog Topology
+Permissions and Feature Access
+Assigning Users to Roles and Teams
+Protecting Assets
+Protecting Sensitive Data
+Credential Management
+Creating Access Policies
+Sharing Across Organizations
+Example Implementations
+Learning Center
+Support
+Glossary
+Standard Attributes
+Guides
+Agent
+Architecture
+IoT
+Supported Platforms
+AIX
+Linux
+Ansible
+Chef
+Heroku
+MacOS
+Puppet
+SaltStack
+SCCM
+Windows
+From Source
+Log Collection
+Log Agent tags
+Advanced Configurations
+Proxy
+Transport
+Multi-Line Detection
+Configuration
+Commands
+Configuration Files
+Log Files
+Status Page
+Network Traffic
+Proxy Configuration
+Squid proxy configuration
+FIPS Compliance
+Dual Shipping
+Secrets Management
+Fleet Automation
+Fleet View
+Configure Agents
+Configure Agent Integrations
+Configure Custom Logs
+Upgrade Agents
+Upgrade SDKs
+Troubleshooting
+Container Hostname Detection
+Debug Mode
+Agent Flare
+Agent Check Status
+NTP Issues
+Permission Issues
+Integrations Issues
+Site Issues
+Autodiscovery Issues
+Windows Container Issues
+Agent Runtime Configuration
+High CPU or Memory Consumption
+Guides
+Data Security
+Integrations
+Guides
+Client SDKs
+Setup
+Advanced Configuration
+Data Collected
+Integrated Libraries
+Troubleshooting
+Extend Datadog
+Authorization
+OAuth2 in Datadog
+Authorization Endpoints
+DogStatsD
+Datagram Format
+Unix Domain Socket
+High Throughput Data
+Data Aggregation
+DogStatsD Mapper
+Custom Checks
+Writing a Custom Agent Check
+Writing a Custom OpenMetrics Check
+Integrations
+Build an Integration with Datadog
+Create an Agent-based Integration
+Create an API-based Integration
+Create a Log Pipeline
+Integration Assets Reference
+Build a Marketplace Offering
+Create an Integration Dashboard
+Create a Monitor Template
+Create a Cloud SIEM Detection Rule
+Install Agent Integration Developer Tool
+Service Checks
+Submission - Agent Check
+Submission - DogStatsD
+Submission - API
+Community
+Libraries
+Guides
+OpenTelemetry
+Getting Started
+Datadog Example Application
+OpenTelemetry Demo Application
+Feature Compatibility
+Instrument Your Applications
+Using OTel SDK
+Using Datadog SDK
+OTLP Export
+APIs
+Instrumentation Libraries
+Configuration
+Send Data to Datadog
+DDOT Collector (Recommended)
+Install the DDOT Collector
+Use Custom OTel Components
+Migrate to the DDOT Collector
+OpenTelemetry Collector
+Deploy
+Batch and Memory Settings
+Hostnames and Tagging
+Log Collection
+OTLP Receiver
+OTLP Ingest in the Agent
+Direct OTLP Ingest
+Logs Endpoint
+Metrics Endpoint
+Managed Platforms Endpoint
+Serverless Endpoint
+Semantic Mapping
+Resource Attribute Mapping
+Metrics Mapping
+Infrastructure Host Mapping
+Hostname Mapping
+Service-entry Spans Mapping
+Ingestion Sampling
+Correlate Data
+Logs and Traces
+Metrics and Traces
+RUM and Traces
+DBM and Traces
+Integrations
+Apache Metrics
+Apache Spark Metrics
+Collector Health Metrics
+Datadog Extension
+Docker Metrics
+HAProxy Metrics
+Host Metrics
+IIS Metrics
+Kafka Metrics
+Kubernetes Metrics
+MySQL Metrics
+PostgreSQL Metrics
+NGINX Metrics
+Podman Metrics
+Runtime Metrics
+SQL Server Metrics
+Trace Metrics
+Troubleshooting
+Guides and Resources
+Produce Delta Temporality Metrics
+Visualize Histograms as Heatmaps
+Instrument Unsupported Runtimes
+Migration Guides
+Migrate to OTel Collector v0.120.0+
+Migrate to OTel Collector v0.95.0+
+New Operation Name Mappings
+Agent with DDOT Collector
+Reference
+Terms and Concepts
+Trace Context Propagation
+Trace IDs
+OTLP Metric Types
+Administrator's Guide
+Getting Started
+Plan
+Build
+Run
+API
+Command Line
+MCP Server
+Setup
+MCP Tools
+Partners
+Datadog Mobile App
+Enterprise Configuration
+Datadog for Intune
+Shortcut Configurations
+Push Notifications
+Widgets
+Guides
+DDSQL Reference
+Data Directory
+CoTerm
+Install
+Using CoTerm
+Configuration Rules
+Remote Configuration
+Cloudcraft (Standalone)
+Getting Started
+Account Management
+Components: Common
+Components: Azure
+Components: AWS
+Advanced
+FAQ
+API
+AWS Accounts
+List AWS accounts
+Add an AWS account
+Delete an AWS account
+Update an AWS account
+Snapshot an AWS account
+Get my AWS iam role parameters
+Azure Accounts
+List Azure accounts
+Add an Azure account
+Delete an Azure account
+Update an Azure account
+Snapshot an Azure account
+Blueprints
+List my blueprints
+Create a blueprint
+Delete a blueprint
+Retrieve a blueprint
+Update a blueprint
+Export blueprint as image
+Budgets
+Export budget for a blueprint
+Teams
+List teams
+Users
+Get user profile
+In The App
+Dashboards
+Configure
+Dashboard List
+Widgets
+Configuration
+Widget Types
+Querying
+Functions
+Algorithms
+Arithmetic
+Count
+Exclusion
+Interpolation
+Rank
+Rate
+Regression
+Rollup
+Smoothing
+Telemetry Source
+Timeshift
+Beta
+Graph Insights
+Metric Correlations
+Investigate Anomalies
+Watchdog Explains
+Template Variables
+Overlays
+Annotations
+Guides
+Sharing
+Shared Dashboards
+Widget Share URLs
+Secure Embedded Dashboards
+Share Graphs
+Scheduled Reports
+Notebooks
+Analysis Features
+Getting Started
+Guides
+DDSQL Editor
+Reference Tables
+Sheets
+Functions and Operators
+Guides
+Monitors and Alerting
+Draft Monitors
+Configure Monitors
+Monitor Templates
+Monitor Types
+Notifications
+Notification Rules
+Variables
+Downtimes
+Examples
+Manage Monitors
+Search Monitors
+Check Summary
+Monitor Status
+Status Graphs
+Status Events
+Monitor Settings
+Monitor Quality
+Guides
+Service Level Objectives
+Monitor-based SLOs
+Metric-based SLOs
+Time Slice SLOs
+Error Budget Alerts
+Burn Rate Alerts
+Guides
+Metrics
+Custom Metrics
+Metric Type Modifiers
+Historical Metrics Ingestion
+Submission - Agent Check
+Submission - DogStatsD
+Submission - Powershell
+Submission - API
+OpenTelemetry Metrics
+OTLP Metric Types
+Query OpenTelemetry Metrics
+Metrics Types
+Distributions
+Overview
+Explorer
+Metrics Units
+Summary
+Volume
+Advanced Filtering
+Nested Queries
+Reference Table Joins with Metrics
+Derived Metrics
+Metrics Without Limits™
+Guides
+Watchdog
+Alerts
+Impact Analysis
+RCA
+Insights
+Faulty Deployment Detection
+Faulty Cloud & SaaS API Detection
+Bits AI
+Bits Investigation
+Investigate Issues
+Bits Investigation Integrations and Settings
+Knowledge Sources
+Chat with Bits Investigation
+Bits Remediation
+Bits Detection
+Bits Code
+Setup
+Automations
+Bits Security Analyst
+Bits Chat
+Bits Agent Builder
+Bits Data Analysis
+Skills Library
+Internal Developer Portal
+Catalog
+Set Up
+Discover Entities
+Create Entities
+Import Entities
+Define Ownership
+Entity Model
+Native Entities
+Custom Entities
+AI-generated Systems
+Migrate to v3
+Troubleshooting
+Scorecards
+Scorecard Configuration
+Custom Rules
+Using Scorecards
+Self-Service Actions
+Software Templates
+Engineering Reports
+Teams Performance
+Reliability Overview
+Catalog Health
+Scorecards Performance
+DORA Metrics
+Custom Reports
+Homepage
+Campaigns
+External Provider Status
+Integrations
+Use Cases
+API Management
+Cloud Cost Management
+App and API Protection
+Developer Onboarding
+Dependency Management
+Production Readiness
+Incident Response
+CI Pipeline Visibility
+Onboarding Guide
+Error Tracking
+Explorer
+Issue States
+Regression Detection
+Suspected Causes
+Error Grouping
+Bits Code
+Monitors
+Identify Suspect Commits
+Auto Assign
+Issue Team Ownership
+Track Browser and Mobile Errors
+Browser Error Tracking
+Collecting Browser Errors
+Mobile Crash Tracking
+Replay Errors
+Real User Monitoring
+Logs
+Track Backend Errors
+Getting Started
+Using Single Step Instrumentation
+Using Datadog Tracing Libraries
+Exception Replay
+Capturing Handled Errors
+APM
+Logs
+Manage Data Collection
+Ticketing Systems
+Jira
+Linear
+Work Management
+Link Pull Requests
+Troubleshooting
+Guides
+Change Tracking
+Feature Flags
+Event Management
+Ingest Events
+Pipelines and Processors
+Aggregation Key Processor
+Arithmetic Processor
+Date Remapper
+Category Processor
+Grok Parser
+Lookup Processor
+Remapper
+Service Remapper
+Status Remapper
+String Builder Processor
+Explorer
+Searching
+Navigate the Explorer
+Customization
+Facets
+Attributes
+Notifications
+Analytics
+Saved Views
+Triage Inbox
+Correlation
+Configuration
+Triaging & Notifying
+Analytics
+Maintenance Windows
+Guides
+Incident Response
+Incident Management
+Incident Investigation
+Declare an Incident
+Describe an Incident
+Response Team
+Notification
+Timeline
+Incident AI
+Setup and Configuration
+Information
+Property Fields
+Transition Forms
+Responder Types
+Automations
+Notification Rules
+Templates
+Variables
+Integrations
+Post Incident
+Follow-ups
+Postmortems
+Analytics and Reporting
+Guides
+On-Call
+Onboard a Team
+Pages
+Live Call Routing
+Cross-org Paging
+Routing Rules
+Escalation Policies
+Schedules
+Handover automation
+Notification Preferences
+Supported Countries
+Guides
+Status Pages
+Work Management
+Projects
+Settings
+Create a Work Item
+Customization
+View and Manage Work Items
+Notifications and Integrations
+Work Item Automation Rules
+Work Item Approvals
+AI Tools
+Custom Agents
+Troubleshooting
+Actions & Remediations
+Bits Agent Builder
+Workflow Automation
+Build Workflows
+Access and Authentication
+Trigger Workflows
+Variables and parameters
+Actions
+Workflow Logic
+Save and Reuse Actions
+Test and Debug
+Expressions
+Track Workflows
+Limits
+MCP Tools
+Apps
+App Builder
+Build Apps
+Access and Authentication
+Queries
+Variables
+Events
+Components
+Custom Charts
+React Renderer
+Tables
+Reusable Modules
+JavaScript Expressions
+Embedded Apps
+Input Parameters
+Save and Reuse Actions
+Datastores
+Create and Manage Datastores
+Use Datastores with Apps and Workflows
+Automation Rules
+Access and Authentication
+Forms
+Components
+Responses
+Guides
+Action Catalog
+Connections
+HTTP Request
+Integration Connections
+Google Workspace
+Private Action Credentials
+Private Actions
+Getting Started
+Set Up in the Datadog Agent
+Set Up a Standalone Runner
+Enrollment and Ownership
+Authorize Private Actions
+Execution Policies
+Run a Script
+Reference
+Infrastructure
+Cloudcraft
+Overlays
+Infrastructure
+Observability
+Security
+Cloud Cost Management
+Monitors
+APM
+Resource Catalog
+Cloud Resources Schema
+Policies
+Resource Changes
+Universal Service Monitoring
+Setup
+Guides
+End User Device Monitoring
+Setup
+macOS
+Windows
+Hosts
+Host List
+Containers
+Container Monitoring
+Containers Explorer
+Container Images Explorer
+Kubernetes Explorer
+Configuration
+Resource Utilization
+Remediation
+Amazon ECS Explorer
+Autoscaling
+Manifest Reference
+Cluster
+Docker-based
+APM
+Log collection
+Tag extraction
+Integrations
+Prometheus
+Data Collected
+Kubernetes
+Installation
+Migrate to the Datadog Operator
+Further Configuration
+Distributions
+APM
+App and API Protection
+Log collection
+Tag extraction
+Integrations
+Prometheus & OpenMetrics
+Control plane monitoring
+Data collected
+kubectl Plugin
+Datadog CSI Driver
+Data security
+Cluster Agent
+Setup
+Commands & Options
+Cluster Checks
+Endpoint Checks
+Admission Controller
+Amazon ECS
+APM
+Log collection
+Tag extraction
+Data collected
+Managed Instances
+AWS Fargate with ECS
+Datadog Operator
+Migrate to the Datadog Operator
+Advanced Install
+Configuration
+Datadog Agent Profiles
+Providers
+Custom Checks
+Data Collected
+Secret Management
+DatadogDashboard CRD
+DatadogGenericResource CRD
+DatadogMonitor CRD
+DatadogSLO CRD
+Troubleshooting
+Duplicate hosts
+Cluster Agent
+Cluster Checks
+HPA and Metrics Provider
+Admission Controller
+Log Collection
+Guides
+Processes
+Increase Process Retention
+Serverless
+AWS
+AWS Lambda
+Instrumentation
+Managed Instances
+Durable Functions
+Lambda Metrics
+Distributed Tracing
+Log Collection
+Remote Instrumentation
+Advanced Configuration
+Continuous Profiler
+Securing Functions
+Deployment Tracking
+OpenTelemetry
+Troubleshooting
+Lambda Web Adapter
+FIPS Compliance
+AWS Step Functions
+Installation
+Merge Step Functions and Lambda Traces
+Enhanced Metrics
+Redrive Executions
+Distributed Map States
+Troubleshooting
+AWS Fargate
+Azure
+Azure App Service
+Linux - Code
+Linux - Container
+Windows - Code
+Azure Container Apps
+Manual Instrumentation
+Azure Database & Messaging Services
+Cosmos DB
+Event Hubs
+Service Bus
+Azure Functions
+.NET APM Extension
+Azure Logic Apps
+Google
+Cloud Run Containers
+Cloud Run Jobs (Preview)
+Cloud Run Functions
+Cloud Run Functions (1st generation)
+Libraries & Integrations
+Glossary
+Guides
+Network Monitoring
+Cloud Network Monitoring
+Setup
+Network Health
+Network Analytics
+Tags Reference
+Network Map
+Guides
+Supported Cloud Services
+Terms and Concepts
+DNS Monitoring
+Network Device Monitoring
+Setup
+Supported Devices
+SNMP Metrics
+SNMP Traps
+Ping
+Syslog
+VPN Monitoring
+Summary Page
+Integrations
+Profiles
+Getting Started
+Advanced
+Configuration Management
+Maps
+SNMP Metrics Reference
+Troubleshooting
+Guides
+Terms and Concepts
+NetFlow Monitoring
+Monitors
+Network Path
+Setup
+List View
+Path View
+Autonomous Systems View
+Monitors
+Guides
+Terms and Concepts
+Storage Management
+Amazon S3
+Google Cloud Storage
+Azure Blob Storage
+Cloud Cost
+Cloud Cost
+Datadog Costs
+Setup
+Permissions
+AWS
+Azure
+Google Cloud
+Oracle
+SaaS and AI Costs
+Snowflake
+Databricks
+OpenAI
+Anthropic
+Cursor
+Temporal Cloud
+GitHub
+Confluent Cloud
+MongoDB
+Elastic Cloud
+Fastly
+Twilio
+Custom
+Tags
+Tag Explorer
+Multisource Querying
+Allocation
+Tag Pipelines
+Container Cost Allocation
+BigQuery Costs
+Custom Allocation Rules
+AI Costs
+Reporting
+Scheduled Reports
+Explorer
+Dashboard
+Recommendations
+Cost Optimization Automations
+Notifications
+Custom Recommendations
+Planning
+Budgets
+Forecasting
+Commitment Programs
+Cost Changes
+Monitors
+Anomalies
+Real-Time Costs
+Cloud Cost Skill
+Application Performance
+APM
+APM Terms and Concepts
+Application Instrumentation
+Single Step Instrumentation
+Linux
+Docker
+Kubernetes
+Windows IIS
+Manually managed SDKs
+Java
+Python
+Ruby
+Go
+Node.js
+PHP
+C++
+Rust
+.NET Core
+.NET Framework
+Android
+iOS
+Code-based Custom Instrumentation
+Server-Side Languages
+Client-Side Languages
+Dynamic Instrumentation
+Autocomplete and Search
+Expression Language
+Sensitive Data Scrubbing
+Library Compatibility
+Library Configuration
+Configuration at Runtime
+Trace Context Propagation
+Serverless Application Tracing
+Proxy Tracing
+Apache HTTP Server
+Envoy
+Istio
+Kong
+NGINX
+Amazon API Gateway
+Azure API Management
+Span Tag Semantics
+Span Links
+APM Metrics Collection
+Trace Metrics
+Runtime Metrics
+Trace Pipeline Configuration
+Ingestion Mechanisms
+Ingestion Controls
+Adaptive Sampling
+Processing Pipelines
+Generate Metrics
+Trace Retention
+Usage Metrics
+Correlate Traces with Other Telemetry
+Correlate DBM and Traces
+Correlate Logs and Traces
+Correlate RUM and Traces
+Correlate Synthetics and Traces
+Correlate Profiles and Traces
+Trace Explorer
+Search Spans
+Query Syntax
+Trace Queries
+Span Tags and Attributes
+Span Visualizations
+Trace View
+Tag Analysis
+Recommendations
+Code Origin for Spans
+Service Observability
+Catalog
+Service Page
+Resource Page
+Deployment Tracking
+Service Map
+Inferred Services
+Service Remapping Rules
+Tag Enrichment
+Integration Override Removal
+APM Monitors
+Endpoint Observability
+Explore Endpoints
+Monitor Endpoints
+Live Debugger
+Bits Live Debugger
+Error Tracking
+Issue States
+Error Tracking Explorer
+Error Grouping
+Stack Traces
+Monitors
+Identify Suspect Commits
+Exception Replay
+Troubleshooting
+Data Security
+Guides
+Troubleshooting
+Agent Rate Limits
+Agent APM metrics
+Agent Resource Usage
+Correlated Logs
+PHP 5 Deep Call Stacks
+.NET diagnostic tool
+APM Quantization
+Go Compile-Time Instrumentation
+Tracer Startup Logs
+Tracer Debug Logs
+Connection Errors
+SDK Configurations
+Continuous Profiler
+Enabling the Profiler
+Supported Language and SDK Versions
+Profile Types
+Profile Visualizations
+Investigate Slow Traces or Endpoints
+Compare Profiles
+Automated Analysis
+Profiler Troubleshooting
+Java
+Python
+Go
+Ruby
+Node.js
+.NET
+PHP
+C/C++/Rust
+Guides
+Database Monitoring
+Agent Integration Overhead
+Setup Architectures
+Setting Up Postgres
+Self-hosted
+RDS
+RDS Quick Install
+Aurora
+Google Cloud SQL
+AlloyDB
+Azure
+Supabase
+Supabase Cloud
+Supabase Self-Hosted
+Heroku
+Advanced Configuration
+Troubleshooting
+Setting Up MySQL
+Self-hosted
+RDS
+Aurora
+Google Cloud SQL
+Azure
+Advanced Configuration
+Troubleshooting
+Setting Up SQL Server
+Self-hosted
+RDS
+Azure
+Google Cloud SQL
+Troubleshooting
+Setting Up Oracle
+Self-hosted
+RDS
+RAC
+Exadata
+Autonomous Database
+Troubleshooting
+Setting Up Amazon DocumentDB
+Amazon DocumentDB
+Troubleshooting
+Setting Up MongoDB
+Self-hosted
+MongoDB Atlas
+Troubleshooting
+Setting Up ClickHouse
+Self-hosted
+ClickHouse Cloud
+Connecting DBM and Traces
+Data Collected
+Provision the Agent with Terraform
+Collecting Custom Metrics
+Exploring Custom Metrics
+Exploring Database Hosts
+Exploring Query Metrics
+Exploring Query Samples
+Exploring Database Schemas
+Exploring Recommendations
+Database Investigations in Bits Chat
+Bits Database Optimization
+Troubleshooting
+Guides
+Data Streams Monitoring
+Setup
+Kafka Console
+Setup
+Data Collection
+Monitors and Automation
+Schema Tracking
+Dead Letter Queues
+Metrics and Tags
+Data Observability
+Data Observability Overview
+Data Catalog
+Lineage
+Quality Monitoring
+Data Warehouses
+Snowflake
+Databricks
+BigQuery
+Redshift
+Data Lakes
+Iceberg Tables (AWS Glue)
+Transactional Databases
+PostgreSQL
+ELT Integrations
+Airbyte
+Fivetran
+Hightouch
+Business Intelligence Integrations
+Hex
+Looker
+Tableau
+Sigma
+Metabase
+Power BI
+Jobs Monitoring
+Databricks
+Private Link Connectivity
+Airflow
+Logs Correlation
+Troubleshooting DAG
+Upgrade OpenLineage Provider on Amazon MWAA
+dbt
+Spark on Kubernetes
+Spark on Amazon EMR
+Spark on Google Dataproc
+AWS Glue
+Azure Data Factory
+Custom Jobs (OpenLineage)
+Datadog Agent for OpenLineage Proxy
+CI/CD
+Integration Overhead
+Digital Experience
+Journey Monitoring
+Map
+Suggested Journeys
+Details Report
+Variants
+Uptime
+Roles and Permissions
+Guides
+Real User Monitoring
+Application Monitoring
+Browser
+Setup
+Advanced Configuration
+Build Plugins
+Data Collected
+Monitoring Page Performance
+Optimizing Performance
+Monitoring Resource Performance
+Collecting Browser Errors
+Tracking User Actions
+Frustration Signals
+Error Tracking
+Troubleshooting
+Android and Android TV
+Setup
+Crash Reporting
+Monitoring App Launch
+Monitoring App Performance
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Web View Tracking
+Integrated Libraries
+Jetpack Compose Instrumentation
+Troubleshooting
+SDK Performance Impact
+Apple Platforms
+Setup
+Crash Reporting
+Monitoring App Launch
+Mobile App Performance
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Web View Tracking
+Integrated Libraries
+Troubleshooting
+Supported Versions
+SDK Performance Impact
+Flutter
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Web View Tracking
+Integrated Libraries
+Troubleshooting
+Kotlin Multiplatform
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Web View Tracking
+Integrated Libraries
+Troubleshooting
+C / C++
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Advanced Build Configuration
+Troubleshooting
+Supported Versions
+React Native
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Web View Tracking
+Integrated Libraries
+Troubleshooting
+Roku
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Web View Tracking
+Unity
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Troubleshooting
+.NET MAUI
+Setup
+Crash Reporting
+Advanced Configuration
+Data Collected
+Mobile Vitals
+Frustration Signals
+Troubleshooting
+Platform
+Dashboards
+Performance
+Testing and Deployment
+Usage
+Errors
+Monitors
+Generate Custom Metrics
+Exploring RUM Data
+Search RUM Events
+Search Syntax
+Group
+Visualize
+Events
+Export
+Saved Views
+Watchdog Insights for RUM
+Correlate RUM with Other Telemetry
+Correlate LLM with RUM
+Correlate Logs with RUM
+Correlate Profiling with RUM
+Correlate Synthetics with RUM
+Correlate Traces with RUM
+Feature Flag Tracking
+Setup
+Using Feature Flags
+Error Tracking
+Explorer
+Issue States
+Track Browser Errors
+Track Mobile Errors
+Error Grouping
+Monitors
+Identify Suspect Commits
+Troubleshooting
+AI Investigations
+Single-View AI Investigation
+Multi-View AI Investigation
+Operation AI Investigation
+RUM Without Limits
+Metrics
+Retention Filters
+Retention Quotas
+Operations Monitoring
+Managed Archive
+Export Pipelines
+Ownership of Views
+Guides
+Data Security
+Synthetic Testing and Monitoring
+API Testing
+HTTP
+SSL
+DNS
+WebSocket
+TCP
+UDP
+ICMP
+GRPC
+Error codes
+Multistep API Testing
+Browser Testing
+Recording Steps
+Browser Testing Results
+Advanced Options for Steps
+Authentication in Browser Testing
+Network Path Testing
+Terms and Concepts
+Mobile Application Testing
+Testing Steps
+Testing Results
+Advanced Options for Steps
+Supported Devices
+Restricted Networks
+Settings
+Test Suites
+Bits Testing
+Goal-Based Testing
+Platform
+Dashboards
+Test Summary
+API Testing
+Browser Testing
+Metrics
+Test Coverage
+Private Locations
+Configuration
+Dimensioning
+Monitoring
+Connect APM
+Settings
+Scheduled Downtime
+Exploring Synthetics Data
+Saved Views
+Results Explorer
+Search Test Batches
+Search Test Runs
+Search Syntax
+Export Test Runs
+Saved Views
+Guides
+Notifications
+Template Variables
+Browser
+Mobile
+Multistep API
+API
+Conditional Alerting
+Advanced Notifications
+Integrate with Statuspage
+Troubleshooting
+Data Security
+Continuous Testing
+Local and Staging Environments
+Testing Multiple Environments
+Testing With Proxy, Firewall, or VPN
+CI/CD Integrations
+Configuration
+Azure DevOps Extension
+CircleCI Orb
+GitHub Actions
+GitLab
+Jenkins
+Bitrise (Upload Application)
+Bitrise (Run Tests)
+Settings
+Results Explorer
+Metrics
+Guides
+Troubleshooting
+Experiments
+Create Experiment Metrics
+Sync Metrics from YAML
+Standardize Experiments with Protocols
+Plan and Launch Experiments
+Read Experiment Results
+Experiment Diagnostics
+Concepts
+Subject Types
+Exposure SQL Models
+SQL Template Variables
+Cumulative Impact
+Statistics
+Analysis Methods
+CUPED: Variance Reduction Technique
+Minimum Detectable Effects
+Multiple Testing Correction
+Global Lift
+Break Out Metrics by Property
+Troubleshooting
+Experiments MCP Tools
+Guides
+Product Analytics
+Charts
+Chart Basics
+Funnel
+Journey Paths
+Pathways
+Retention
+Analytics
+Dashboards
+Segments
+Action Management
+Managing Profiles
+Identity Resolution
+Data Collected
+Server-Side Events
+Export Pipelines
+Usability
+Guides
+Troubleshooting
+Session Replay
+Setup
+Privacy Options
+Developer Tools
+Playlists
+Heatmaps
+Impact on App Performance
+Troubleshooting
+Guides
+Software Delivery
+CI Visibility
+CI/CD Optimization
+Pipeline Visibility
+AWS CodePipeline
+Azure Pipelines
+Buildkite
+CircleCI
+Codefresh
+GitHub Actions
+GitLab
+Jenkins
+TeamCity
+Other CI Providers
+Automatic Job Retries
+Custom Commands
+Custom Tags and Measures
+Search and Manage
+Explorer
+Search Syntax
+Search Pipeline Executions
+Export
+Saved Views
+Monitors
+Guides
+Troubleshooting
+CD Visibility
+Deployment Visibility
+Argo CD
+CI Providers
+Explore Deployments
+Search Syntax
+Facets
+Saved Views
+Features
+Code Changes Detection
+Rollback Detection
+Monitors
+Deployment Gates
+Setup
+Just-In-Time (JIT) Gates
+Preconfigured Gates
+Explore
+Test Optimization
+CI/CD Optimization
+Setup
+.NET
+Java and JVM Languages
+JavaScript and TypeScript
+Python
+Ruby
+Swift
+Go
+JUnit Report Uploads
+Bazel
+Java
+Python
+Go
+Network Settings
+Tests in Containers
+Explorer
+Search Syntax
+Search Test Runs
+Export
+Saved Views
+Monitors
+Test Health
+Flaky Test Management
+Working with Flaky Tests
+Early Flake Detection
+Auto Test Retries
+Test Impact Analysis
+How It Works
+Troubleshooting
+Setup
+.NET
+JavaScript and TypeScript
+Python
+Swift
+Java
+Ruby
+Go
+Test Parallelization
+Setup
+Configuration
+Best Practices
+Troubleshooting
+Developer Workflows
+Code Coverage
+Instrument Browser Tests with RUM
+Instrument Swift Tests with RUM
+Correlate Logs and Tests
+Guides
+Troubleshooting
+Code Coverage
+Setup
+Configuration
+Coverage Calculation
+Monorepo Support
+Flags
+Carryforward
+Data Collected
+Dashboards
+PR Gates
+Setup
+Delivery Performance
+DORA Metrics
+Setup
+Change Failure Detection
+DORA Metrics Calculation
+Data Collected
+AI Impact
+Feature Flags
+Client SDKs
+Android and Android TV
+Angular
+Dart and Flutter
+iOS and tvOS
+JavaScript
+React
+React Native
+Unity
+Server SDKs
+.NET
+Go
+Java
+Node.js
+PHP
+Python
+Ruby
+Concepts
+Environments
+Variants and Flag Types
+Evaluation Context
+Targeting Rules and Filters
+Targeting Attributes
+Evaluation Tester
+Scheduled Rollouts
+Saved Filters
+Traffic Splitting and Randomization
+Experiments
+Distribution Channels
+Configuration Sources
+Monthly Flag Configuration Requests
+Flag History
+Feature Flag Graphs
+Stale Flags
+Permissions and Access Control
+Approvals
+Use Cases
+Progressive Rollouts and Canaries
+Kill Switches
+Dynamic Configuration
+Implementation Patterns
+Local Flag Overrides
+OpenTelemetry
+Serverless
+Browser Developer Extension
+MCP Server
+Guides
+Developer Integrations
+Source Code Integration
+Source Code Management Providers
+Service Mapping
+.NET
+Go
+Java
+Node.js
+PHP
+Python
+Ruby
+Other Languages
+Resource Mapping
+Features
+IDE Plugins
+JetBrains IDEs
+Code Security
+Error Tracking
+Logs
+VS Code & Cursor
+Code Security
+Code Insights
+Logs
+Exception Replay
+Security
+Security Overview
+Detection Rules
+OOTB Rules
+Notifications
+Rules
+Variables
+Suppressions
+Automation Pipelines
+Modify Severity Level
+Mute
+Set Due Date Rules
+Add to Security Inbox
+Create Tickets
+Security Inbox
+Threat Intelligence
+Events Forwarding
+Audit Trail
+Access Control
+Ticketing Integrations
+Assignee Management
+Research Feed
+Severity Adjustment
+Security MCP Tools
+Guides
+Cloud SIEM
+Ingest and Enrich
+Content Packs
+Bring Your Own Threat Intelligence
+Open Cybersecurity Schema Framework
+OCSF Processor
+Detect and Monitor
+OOTB Rules
+Custom Detection Rules
+Create Rule
+Anomaly
+Content Anomaly
+Impossible Travel
+New Value
+Sequence
+Version History
+Suppressions
+Critical Assets
+Historical Jobs
+MITRE ATT&CK Map
+Triage and Investigate
+Investigate Security Signals
+Risk Insights
+IOC Explorer
+Investigator
+Respond and Report
+Security Operational Metrics
+Guides
+Data Security
+Code Security
+Static Code Analysis (SAST)
+Setup
+Configuration
+GitHub Actions
+Generic CI Providers
+AI-Enhanced Static Code Analysis
+SAST Custom Rule Creation Tutorial
+SAST Custom Rules
+SAST Custom Rules Guide
+Static Code Analysis (SAST) rules
+Software Composition Analysis (SCA)
+Static Setup
+Runtime Setup
+Library Compatibility
+Configuration
+Library Inventory
+CVE Explorer
+Secret Scanning
+GitHub Actions
+Generic CI Providers
+Configuration
+Secret Validation
+Runtime Code Analysis (IAST)
+Setup
+Security Controls
+Infrastructure as Code (IaC) Security
+Setup
+Configuration
+GitHub Actions
+Rules
+IaC Custom Rules
+IaC Custom Rule Reference
+Developer Tool Integrations
+Pull Request Comments
+PR Gates
+IDE Plugins
+Git Hooks
+MCP Server
+Tools Reference
+Troubleshooting
+SCFW GitHub Action
+Troubleshooting
+Guides
+Cloud Security
+Setup
+Supported Deployment Types
+Agentless Scanning
+Compatibility
+Deployment Methods
+Enable Agentless Scanning
+Update Agentless Scanning
+Deploy the Agent
+Container Image Scanning in CI/CD
+Set Up CloudTrail Logs
+Set Up without Infrastructure Monitoring
+Deploy using Cloud Integrations
+Security Graph
+Misconfigurations
+Manage Compliance Rules
+Create Custom Rules
+Manage Compliance Posture
+Create Custom Frameworks
+Supported Frameworks
+Explore Misconfigurations
+Export Misconfigurations
+Kubernetes Security Posture Management
+Identity Risks
+Vulnerabilities
+Hosts and Containers Compatibility
+Crown Jewels
+OOTB Rules
+Triage and Prioritize
+Runtime Prioritization Engine
+Severity Scoring
+Review and Remediate
+Mute Issues
+Automate Security Workflows
+Remediate with AI
+Ownership Agent
+Set Up Ownership Preferences
+Code Locations
+Guides
+Troubleshooting
+Vulnerabilities
+Agentless Scanning
+App and API Protection
+Terms and Concepts
+How It Works
+Threat Intelligence
+Trace Qualification
+User Monitoring and Protection
+Setup
+API Posture
+Overview
+API Findings
+Compliance
+API Inventory
+API Endpoints
+Services
+Endpoint Scanning
+Sensitive Data
+Threat Protection
+Overview
+Security Signals
+Attackers Explorer
+Attacker Fingerprint
+Attacker Clustering
+Users Explorer
+Policies
+Custom Rules
+OOTB Rules
+In-App WAF Rules
+Tracing Library Configuration
+Exploit Prevention
+WAF Integrations
+Account Takeover Protection
+Attack Summary
+Guides
+Troubleshooting
+AI Guard
+Get Started with AI Guard
+Set Up AI Guard
+Automatic Integrations
+Manual Integrations
+SDK
+HTTP API
+Security Signals
+Workload Protection
+Setup
+Docker
+Kubernetes
+ECS (EC2 compute)
+Linux
+Fargate
+Windows
+Advanced Configuration
+Detect and Monitor
+Agent Rules
+SECL guide
+Policy Management
+Variables and actions
+Linux syntax
+Windows syntax
+Detection and Finding Rules
+Detection Rules
+Finding Rules
+Linux Backend Syntax
+Windows Backend Syntax
+Threat Intelligence
+Content Packs
+Investigate and Triage
+Agent Events
+Signals
+Investigate Security Signals
+Triage and Act on Security Signals
+Findings
+Respond to Threats
+Coverage
+Review and Improve Coverage
+Guides
+Troubleshooting
+Sensitive Data Scanner
+Setup
+Telemetry Data
+Cloud Storage
+Scanning Rules
+Library Rules
+Custom Rules
+Guides
+Troubleshooting
+AI Observability
+Agent Observability
+Quickstart
+Terms and Concepts
+Build with AI
+Instrument
+Automatic
+SDK Reference
+HTTP API
+OpenTelemetry
+Agentic Instrumentation
+Python
+Node.js
+Java
+Correlate with APM
+Prompt Tracking
+Multimodal
+Investigate
+Querying spans and traces
+Cost
+Metrics
+Patterns
+Evaluations
+Custom LLM-as-a-Judge
+Language Mismatch
+Sensitive Data Scanner
+End-User Feedback
+External Evaluations
+Evaluation Developer Guide
+Compatibility
+Annotation Queues
+Export API
+Improve
+Playground
+Datasets
+Experiments
+Setup and Usage
+Analyzing Results
+Advanced Experiment Runs
+Prompt Optimization
+Experiments API
+Data Access Control
+Configure
+Prompt Management
+Automation Rules
+Data Governance
+Lapdog
+Guides
+GPU Monitoring
+Setup
+Summary Page
+Fleet Page
+Agent Console
+Setup
+Log Management
+Observability Pipelines
+Configuration
+Explore Templates
+Set Up Pipelines
+Pipeline Simulation
+Install the Worker
+Advanced Worker Configuration
+Run Multiple Pipelines on a Host
+Secrets Management
+Live Capture
+Update Existing Pipelines
+Export Pipeline
+Network Traffic
+Access Control
+Sources
+Akamai DataStream
+Amazon Data Firehose
+Amazon S3
+Azure Event Hubs
+Cloudflare Logpush
+Datadog Agent
+Datadog Lambda Extension
+Datadog Lambda Forwarder
+Filebeat
+Fluent
+Google Pub/Sub
+HTTP Client
+HTTP Server
+OpenTelemetry
+Kafka
+Logstash
+MySQL
+Okta
+Socket
+Splunk HEC
+Splunk TCP
+Sumo Logic Hosted Collector
+Syslog
+WebSocket
+Processors
+Add Environment Variables
+Add hostname
+Aggregate
+Custom Processor
+Deduplicate
+Edit fields
+Edit tags
+Enrichment Table
+Filter
+Generate Metrics
+Grok Parser
+Parse JSON
+Parse XML
+Quota
+Reduce
+Remap to OCSF
+Sample
+Sensitive Data Scanner
+Split Array
+Tag Allow/Block List
+Tags
+Tag Cardinality Control
+Throttle
+Destinations
+Amazon OpenSearch
+Amazon S3
+Amazon Security Lake
+Azure Storage
+ClickHouse
+CrowdStrike NG-SIEM
+Databricks (Zerobus)
+Datadog Archives
+Datadog BYOC Logs
+Datadog Logs
+Datadog Metrics
+Elasticsearch
+Google Cloud Storage
+Google Pub/Sub
+Google SecOps
+HTTP Client
+Kafka
+Microsoft Sentinel
+New Relic
+OpenSearch
+SentinelOne
+Socket
+Splunk HEC
+Sumo Logic Hosted Collector
+Syslog
+Packs
+Replay
+Search Syntax
+Scaling and Performance
+Buffering and Backpressure
+Scaling Best Practices
+Monitoring and Troubleshooting
+Worker CLI Commands
+Monitoring Pipelines
+Pipeline Usage Metrics
+Troubleshooting
+Guides and Resources
+Upgrade Worker Guide
+Log Management
+Log Collection & Integrations
+Browser
+Android
+iOS
+Flutter
+React Native
+Roku
+Kotlin Multiplatform
+C / C++
+.NET MAUI
+C#
+Go
+Java
+Node.js
+PHP
+OpenTelemetry
+Python
+Agent Integrations
+Ruby
+Other Integrations
+Log Configuration
+Pipelines
+Processors
+Parsing
+Pipeline Scanner
+Attributes and Aliasing
+Generate Metrics
+Indexes
+Flex Logs
+Archives
+Rehydrate from Archives
+Forwarding
+Log Optimizer
+Log Explorer
+Live Tail
+Search Logs
+Search Syntax
+Advanced Search
+Facets
+Calculated Fields
+Formulas
+Extractions
+Analytics
+Patterns
+Transactions
+Visualize
+Log Side Panel
+Export
+Watchdog Insights for Logs
+Saved Views
+Archive Search
+Findings
+Error Tracking
+Error Tracking Explorer
+Issue States
+Track Browser and Mobile Errors
+Track Backend Errors
+Error Grouping
+Manage Data Collection
+Dynamic Sampling
+Monitors
+Identify Suspect Commits
+Troubleshooting
+Reports
+Guides
+Data Security
+Troubleshooting
+Live Tail
+BYOC Logs
+Introduction
+Architecture
+Network
+Supported Features
+Quickstart
+Install
+AWS EKS
+Azure AKS
+GCP GKE
+Docker (Local)
+Ingest
+Datadog Agent
+Observability Pipelines
+REST API
+Configure
+Indexes
+Ingress
+Lambda Search Offloading
+Operate
+Sizing
+Autoscaling
+Monitoring
+Search Logs
+Production Best Practices
+Disk Buffer Durability
+Releases and Updates
+Troubleshooting
+Guides
+Release Notes
+Administration
+Account Management
+Organization Topology
+Switching Between Orgs
+Organization Settings
+User Management
+Login Methods
+Mobile and Third-Party Access
+Custom Organization Landing Page
+Service Accounts
+IP Allowlist
+Domain Allowlist
+Cross-Organization Visibility
+SMTP Configuration
+Cross-App Access
+Access Control
+Granular Access
+Permissions
+Data Access
+SSO with SAML
+Configuring SAML
+Renewing SAML Certificates
+User Group Mapping
+Active Directory
+Auth0
+Entra ID
+Google
+LastPass
+Okta
+SafeNet
+Troubleshooting
+Delete Data
+SCIM
+Okta
+Microsoft Entra ID
+API and Application Keys
+Personal Access Tokens
+Service Access Tokens
+Teams
+Team Management
+Provision with GitHub
+Governance Console
+Controls
+Multi-Factor Authentication
+Audit Trail
+Events
+Forwarding
+Guides
+Safety Center
+Plan & Usage
+Bill Overview
+Cost Visibility Through a Partner
+Cost Details
+Usage Details
+Partner Experience
+Customer Pricing
+Billing
+Pricing
+Credit Card
+Product Allotments
+Usage Metrics
+Usage Attribution
+Custom Metrics
+Containers
+Log Management
+APM
+Serverless
+Real User Monitoring
+CI Visibility
+Incident Response
+AWS Integration
+Azure Integration
+Google Cloud Integration
+OCI Integration
+Alibaba Integration
+vSphere Integration
+Workflow Automation
+AI Credits
+AI Credit Limits
+Multi-org Accounts
+Organization Groups
+Guides
+Workload Identity Federation
+Disaster Recovery
+Data Security
+Agent
+Cloud SIEM
+Kubernetes
+Log Management
+Real User Monitoring
+Synthetic Monitoring
+Tracing
+PCI Compliance
+HIPAA Compliance
+Data Retention Periods
+Guides
+Help
+Watchdog RCA
+Docs
+ > 
+Datadog Watchdog™
+ > 
+Watchdog RCA
+Overview
+Watchdog Root Cause Analysis (RCA) helps you reduce mean time to recovery (MTTR) by automating preliminary investigations during incident triage. The Watchdog AI engine identifies interdependencies between application performance anomalies and related components to draw causal relationships between symptoms. Whenever Watchdog finds an APM anomaly, it starts a root cause analysis in an attempt to provide deeper insight into the cause and/or effects of the anomaly.
+Watchdog RCA requires the use of 
+APM
+. In order for Watchdog to take full advantage of all relevant Datadog telemetry for impacted services, Datadog recommends that you set up 
+unified tagging
+.
+Watchdog RCA considers the following sources of data in its analysis:
+APM error rate, latency, and hit rate metrics
+APM deployment tracking
+APM traces
+Agent based infrastructure metrics, including CPU usage, memory usage, and disk usage
+AWS instance status check metrics
+Log pattern anomalies
+Components of a Watchdog Root Cause Analysis
+A Watchdog Root Cause Analysis includes three components: root cause, critical failure, and impact.
+Root cause
+A root cause is a state change that leads to application performance issues. Possible state changes include a difference in infrastructure availability, a traffic spike, or code deployment.
+Watchdog supports four types of root causes:
+Version changes, as captured by APM Deployment Tracking
+Traffic increases, as captured by hit rate metrics on your APM-instrumented services
+AWS instance failures, as captured by Amazon EC2 integration metrics
+Running out of disk space, as captured by system metrics from the Datadog agent
+Watchdog never classifies degraded application performance, such as higher latency or new errors, as the root cause of an incident. Datadog calls an initial symptom of degraded application performance a 
+critical failure
+, as described below.
+Critical failure
+The Critical Failure section highlights where and how the root cause first (and most directly) causes degraded application performance. Critical failures always include a latency or error rate increase.
+Impact
+Watchdog RCA also identifies services indirectly affected by the root cause. Any performance degradation listed in Impact is expected to recover once the Critical Failure is resolved. For RUM users, Watchdog also automatically assesses which view paths and users were affected by the performance anomalies.
+Further reading
+Additional helpful documentation, links, and articles:
+Root cause not showing
+DOCUMENTATION
+Automated root cause analysis
+BLOG
+Language
+English
+English
+Français
+日本語
+한국어
+Español
+Datadog Site
+US1
+US3
+US5
+EU
+AP1
+AP2
+UK1
+US1-FED
+US2-FED
+Edit
+Copy
+Copied
+On this Page
+1
+2
+rulesets
+:
+- 
+%!s(<nil>) 
+# Rules to enforce .
+Request a personalized demo
+×
+Get Started with Datadog
+Ask AI
+Ask AI
+AI-generated responses may be inaccurate. Verify important info.
+New Question
+Switch to
+Floating
+Sidebar
+Full screen
+Your use of this AI-powered assistant is subject to our 
+Privacy Policy
+. Please do not submit sensitive or personal information.
+How can I help you today?
+Ask me anything about Datadog documentation

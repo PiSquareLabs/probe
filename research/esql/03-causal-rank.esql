@@ -1,0 +1,68 @@
+// ============================================================================
+// PROBE — STAGE 2: CAUSAL RANKING (the mechanism that names ONE root cause)
+// ----------------------------------------------------------------------------
+// THE RULE, in one sentence a beginner can defend on stage:
+//
+//   "Among the services that changed, the root cause is the one that has NO
+//    misbehaving dependency of its own, and that changed first."
+//
+// Two independent pieces of evidence, neither of which is an LLM opinion:
+//   1. TOPOLOGICAL  — a service whose own dependencies are all healthy cannot
+//      be a victim; failure propagates from callee UP to caller.
+//   2. TEMPORAL     — a cause cannot start after its effect.
+//
+// It is a lexicographic rule, NOT a weighted score. That matters: there are no
+// magic weights to defend, and the answer is falsifiable.
+//
+// Inputs (both `index.mode: lookup`, single-shard — required by LOOKUP JOIN [F5]):
+//   probe-anomaly-current  : one doc per anomalous service, written by Stage 1.
+//                            Fields: svc, change_ts, cp_pvalue, signal
+//                            PLUS a duplicated key field `callee` == svc, so the
+//                            same set can be joined from the callee side.
+//   probe-service-graph    : one doc per DIRECTED EDGE. Fields: caller, callee.
+//
+// LOOKUP JOIN after STATS/CHANGE_POINT is only restricted for CROSS-CLUSTER
+// queries. PROBE is single-cluster, so this shape is legal. [F5] [UNTESTED]
+// ============================================================================
+
+FROM probe-anomaly-current
+
+// --- Topological step: pull in each anomalous service's DEPENDENCIES ---------
+// Join key must already exist as a column with the matching name. [F5]
+| EVAL caller = svc
+| LOOKUP JOIN probe-service-graph ON caller
+// -> one row per (anomalous service, one of its callees). Services with no
+//    outgoing edges keep a single row with callee = null.
+
+// --- Is that dependency ITSELF anomalous? -----------------------------------
+// Second join, against the anomaly set keyed by `callee`. A non-null
+// dep_change_ts means "this dependency is also misbehaving".
+| LOOKUP JOIN probe-anomaly-current-by-callee ON callee
+| RENAME change_ts AS dep_change_ts
+
+// --- Collapse back to one row per anomalous service -------------------------
+// COUNT() ignores nulls, so this counts only the ANOMALOUS dependencies.
+| STATS anomalous_deps = COUNT(dep_change_ts),
+        total_deps     = COUNT(callee),
+        change_ts      = MIN(change_ts),
+        cp_pvalue      = MIN(cp_pvalue),
+        signals        = VALUES(signal)
+    BY svc
+
+// --- THE RULE ---------------------------------------------------------------
+// A service with zero anomalous dependencies is a SINK in the anomalous
+// subgraph: nothing it depends on is misbehaving, so nothing upstream explains
+// it. That is a root-cause candidate.
+| EVAL is_sink = anomalous_deps == 0
+
+| EVAL verdict = CASE(
+      is_sink AND total_deps == 0, "root_cause_candidate_leaf",
+      is_sink,                     "root_cause_candidate",
+                                   "downstream_victim")
+
+// LOOKUP JOIN output order is NOT guaranteed, so SORT must come AFTER the
+// joins — never before. [F5 usage notes]
+| WHERE is_sink == true
+| SORT change_ts ASC, cp_pvalue ASC
+| KEEP svc, verdict, change_ts, cp_pvalue, anomalous_deps, total_deps, signals
+| LIMIT 5
