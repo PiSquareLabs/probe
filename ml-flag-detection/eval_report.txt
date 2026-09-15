@@ -1,0 +1,39 @@
+Dataset: dataset_v2.csv
+Rows: 65  Features: 162  Classes: 12
+Train/test split: 45/20 (stratified, test_size=0.3)
+Train accuracy: 1.000
+Test accuracy: 0.550
+
+Classification report:
+                            precision    recall  f1-score   support
+
+                 adFailure       0.00      0.00      0.00         1
+                 adHighCpu       0.67      1.00      0.80         2
+                adManualGc       1.00      1.00      1.00         1
+                  baseline       0.50      0.33      0.40         3
+               cartFailure       0.67      1.00      0.80         2
+           emailMemoryLeak       0.50      0.50      0.50         2
+             imageSlowLoad       0.50      1.00      0.67         1
+      intlShippingSlowdown       0.50      0.50      0.50         2
+        kafkaQueueProblems       0.50      0.50      0.50         2
+            paymentFailure       0.00      0.00      0.00         2
+     productCatalogFailure       0.00      0.00      0.00         1
+recommendationCacheFailure       1.00      1.00      1.00         1
+
+                  accuracy                           0.55        20
+                 macro avg       0.49      0.57      0.51        20
+              weighted avg       0.48      0.55      0.50        20
+
+Confusion matrix (rows=true, cols=predicted), labels=['adFailure', 'adHighCpu', 'adManualGc', 'baseline', 'cartFailure', 'emailMemoryLeak', 'imageSlowLoad', 'intlShippingSlowdown', 'kafkaQueueProblems', 'paymentFailure', 'productCatalogFailure', 'recommendationCacheFailure']:
+[[0 0 0 1 0 0 0 0 0 0 0 0]
+ [0 2 0 0 0 0 0 0 0 0 0 0]
+ [0 0 1 0 0 0 0 0 0 0 0 0]
+ [1 1 0 1 0 0 0 0 0 0 0 0]
+ [0 0 0 0 2 0 0 0 0 0 0 0]
+ [0 0 0 0 0 1 0 0 0 0 1 0]
+ [0 0 0 0 0 0 1 0 0 0 0 0]
+ [0 0 0 0 0 0 0 1 1 0 0 0]
+ [0 0 0 0 0 0 0 1 1 0 0 0]
+ [0 0 0 0 1 0 1 0 0 0 0 0]
+ [0 0 0 0 0 1 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0 0 0 0 1]]

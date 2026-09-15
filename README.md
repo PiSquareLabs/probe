@@ -10,6 +10,12 @@ regardless of your Elastic licence.
 - **React + Vite** frontend (`frontend/`)
 - **Elasticsearch + Kibana + elastic-connectors** via `docker-compose.yml`
 
+This is the **Remediator** stage of the full PROBE design (files the
+ticket once a cause is known). The **Detector** stage — three independent
+methods that find the anomaly in the first place, validated against a
+live OpenTelemetry demo — lives alongside it in this repo:
+[`DETECTORS.md`](DETECTORS.md).
+
 ---
 
 ## Read this first

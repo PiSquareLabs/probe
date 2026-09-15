@@ -1,0 +1,152 @@
+[
+  {
+    "flag": "adFailure",
+    "target": "ad",
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": 114.1,
+    "candidates": [
+      "cart",
+      "currency"
+    ],
+    "top_ranked": "cart"
+  },
+  {
+    "flag": "adHighCpu",
+    "target": "ad",
+    "detected": true,
+    "named_root_cause": false,
+    "seconds": 110.6,
+    "candidates": [
+      "ad",
+      "cart",
+      "product-catalog"
+    ],
+    "top_ranked": "cart"
+  },
+  {
+    "flag": "adManualGc",
+    "target": "ad",
+    "detected": true,
+    "named_root_cause": false,
+    "seconds": 110.0,
+    "candidates": [
+      "ad",
+      "cart",
+      "frontend",
+      "recommendation"
+    ],
+    "top_ranked": "cart"
+  },
+  {
+    "flag": "cartFailure",
+    "target": "cart",
+    "detected": true,
+    "named_root_cause": true,
+    "seconds": 110.6,
+    "candidates": [
+      "ad",
+      "cart",
+      "currency",
+      "recommendation"
+    ],
+    "top_ranked": "cart"
+  },
+  {
+    "flag": "paymentFailure",
+    "target": "payment",
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": 110.2,
+    "candidates": [
+      "ad",
+      "cart",
+      "product-catalog",
+      "recommendation"
+    ],
+    "top_ranked": "recommendation"
+  },
+  {
+    "flag": "recommendationCacheFailure",
+    "target": "recommendation",
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": 110.7,
+    "candidates": [
+      "ad",
+      "cart",
+      "currency",
+      "product-catalog"
+    ],
+    "top_ranked": "product-catalog"
+  },
+  {
+    "flag": "imageSlowLoad",
+    "target": "frontend",
+    "detected": true,
+    "named_root_cause": false,
+    "seconds": 110.3,
+    "candidates": [
+      "ad",
+      "cart",
+      "currency",
+      "frontend",
+      "product-catalog",
+      "recommendation"
+    ],
+    "top_ranked": "product-catalog"
+  },
+  {
+    "flag": "intlShippingSlowdown",
+    "target": "shipping",
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": 110.5,
+    "candidates": [
+      "ad",
+      "cart",
+      "currency",
+      "frontend",
+      "product-catalog",
+      "recommendation"
+    ],
+    "top_ranked": "ad"
+  },
+  {
+    "flag": "productCatalogFailure",
+    "target": "product-catalog",
+    "detected": true,
+    "named_root_cause": false,
+    "seconds": 110.3,
+    "candidates": [
+      "ad",
+      "cart",
+      "currency",
+      "frontend",
+      "product-catalog",
+      "recommendation"
+    ],
+    "top_ranked": "ad"
+  },
+  {
+    "flag": "emailMemoryLeak",
+    "target": "email",
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": 110.5,
+    "candidates": [
+      "ad",
+      "cart",
+      "product-catalog",
+      "recommendation"
+    ],
+    "top_ranked": "ad"
+  },
+  {
+    "flag": "kafkaQueueProblems",
+    "target": null,
+    "detected": false,
+    "named_root_cause": false,
+    "seconds": null
+  }
+]

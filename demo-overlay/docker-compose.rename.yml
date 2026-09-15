@@ -1,0 +1,56 @@
+# Local-only override: this host already runs another opentelemetry-demo
+# checkout (astronomy-shop-elastic) whose compose.yaml hardcodes container
+# names and a fixed default network name. This file renames both so the two
+# stacks can run side by side without name collisions.
+networks:
+  default:
+    name: es-flagtest
+    driver: bridge
+
+services:
+  ad:
+    container_name: es-flagtest-ad
+  cart:
+    container_name: es-flagtest-cart
+  checkout:
+    container_name: es-flagtest-checkout
+  currency:
+    container_name: es-flagtest-currency
+  email:
+    container_name: es-flagtest-email
+  frontend:
+    container_name: es-flagtest-frontend
+  frontend-proxy:
+    container_name: es-flagtest-frontend-proxy
+  image-provider:
+    container_name: es-flagtest-image-provider
+  load-generator:
+    container_name: es-flagtest-load-generator
+  payment:
+    container_name: es-flagtest-payment
+  product-catalog:
+    container_name: es-flagtest-product-catalog
+  quote:
+    container_name: es-flagtest-quote
+  recommendation:
+    container_name: es-flagtest-recommendation
+  shipping:
+    container_name: es-flagtest-shipping
+  flagd:
+    container_name: es-flagtest-flagd
+  flagd-ui:
+    container_name: es-flagtest-flagd-ui
+  telemetry-docs:
+    container_name: es-flagtest-telemetry-docs
+  astronomy-db:
+    container_name: es-flagtest-astronomy-db
+  valkey-cart:
+    container_name: es-flagtest-valkey-cart
+  otel-collector:
+    container_name: es-flagtest-otel-collector
+  accounting:
+    container_name: es-flagtest-accounting
+  fraud-detection:
+    container_name: es-flagtest-fraud-detection
+  kafka:
+    container_name: es-flagtest-kafka

@@ -1,0 +1,84 @@
+[
+  {
+    "flag": "adFailure",
+    "target": "ad",
+    "detected": true,
+    "seconds": 26.1,
+    "other_anomalies": null
+  },
+  {
+    "flag": "adHighCpu",
+    "target": "ad",
+    "detected": true,
+    "seconds": 26.5,
+    "other_anomalies": null
+  },
+  {
+    "flag": "adManualGc",
+    "target": "ad",
+    "detected": true,
+    "seconds": 25.7,
+    "other_anomalies": null
+  },
+  {
+    "flag": "cartFailure",
+    "target": "cart",
+    "detected": false,
+    "seconds": null,
+    "other_anomalies": [
+      "payment",
+      "quote"
+    ]
+  },
+  {
+    "flag": "paymentFailure",
+    "target": "payment",
+    "detected": true,
+    "seconds": 25.9,
+    "other_anomalies": null
+  },
+  {
+    "flag": "recommendationCacheFailure",
+    "target": "recommendation",
+    "detected": true,
+    "seconds": 87.2,
+    "other_anomalies": null
+  },
+  {
+    "flag": "imageSlowLoad",
+    "target": "frontend",
+    "detected": false,
+    "seconds": null,
+    "other_anomalies": [
+      "recommendation"
+    ]
+  },
+  {
+    "flag": "intlShippingSlowdown",
+    "target": "shipping",
+    "detected": false,
+    "seconds": null,
+    "other_anomalies": []
+  },
+  {
+    "flag": "productCatalogFailure",
+    "target": "product-catalog",
+    "detected": false,
+    "seconds": null,
+    "other_anomalies": []
+  },
+  {
+    "flag": "emailMemoryLeak",
+    "target": "email",
+    "detected": false,
+    "seconds": null,
+    "other_anomalies": []
+  },
+  {
+    "flag": "kafkaQueueProblems",
+    "target": null,
+    "detected": false,
+    "seconds": null,
+    "note": "no direct trace/metric target"
+  }
+]
