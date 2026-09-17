@@ -1,0 +1,148 @@
+Testing 11 flags x 5 cycles, plus 3 null windows. All flags start 'off'.
+
+=== adFailure cycle 1/5 (variant=on, target=ad, signal=error_rate) ===
+  injected at 2026-09-17T17:47:31.534736+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['fraud-detection', 'frontend', 'frontend-proxy'])
+
+=== adFailure cycle 2/5 (variant=on, target=ad, signal=error_rate) ===
+  injected at 2026-09-17T17  MISSED within 150s (other candidates: ['frontend', 'f  MISSED within 150s (other candidates: ['frontend', 'recommendation'])
+
+=== adFailure cycle 3/5 (variant=on, target=ad, signal=error_rate) ===
+  injected at 2026-09-17T17:52:53.776788+00:00, waiting 15s befor  MISSED within 1  MISSED within 150s (other candidates: none)
+
+=== adFailure cycle 4/5 (variant=on, target=ad, signal=error_rate) ===
+  injected at 2026-09-17T17:55:40.201330+00:00, waiting 15s befor  MISSED within 1  MISSED within 150s (other candidates: ['accounting'])
+
+=== adFailure cycle 5/5 (variant=on, target=ad, signal=error_rate) ===
+  injected at 2026-09-17T17:58:25.311304+00:00, waiting 15s befor  MISSED within 1  MISSED within 150s (other candidates: ['cart', 'frontend-proxy', 'load-generator', 'product-catalog'])
+
+=== adHighCpu cycle 1/5 (variant=on, target=ad, signal=cpu) ===
+  injected at 2026-09-17T18:01:09.128203+00:00, waiting 15s before first scan.  MI  detected but not tier-2-confirmed
+
+=== adHighCpu cycle 2/5 (variant=on, target=ad, signal=cpu) ===
+  injected at 2026-09-17T18:03:44.174001+00:00, waiting 15s before first scan...
+  detected but not tier-2-confirmed
+
+=== adHighCpu cycle 3/5 (variant=on, target=ad, signal=cpu) ===
+  injected at 2026-09-17T18:06:39.925452+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['payment', 'recommendation'])
+
+=== adHighCpu cycle 4/5 (variant=on, target=ad, signal=cpu) ===
+  injected at 2026-09-17T18:09:34.786434+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['load-generator', 'recommendation'])
+
+=== adHighCpu cycle 5/5 (variant=on, target=ad, signal=cpu) ===
+  injected at 2026-09-17T18:12:09.402383+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['accounting', 'frontend', 'frontend-proxy', 'load-generator', 'product-catalog', 'recommendation'])
+
+=== adManualGc cycle 1/5 (variant=on, target=ad, signal=p95_latency) ===
+  injected at 2026-09-17T18:15:09.052545+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['frontend'])
+
+=== adManualGc cycle 2/5 (variant=on, target=ad, signal=p95_latency) ===
+  injected at 2026-09-17T18:17:49.560354+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['flagd', 'fraud-detection'])
+
+=== adManualGc cycle 3/5 (variant=on, target=ad, signal=p95_latency) ===
+  injected at 2026-09-17T18:20:34.642382+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['accounting', 'kafka'])
+
+=== adManualGc cycle 4/5 (variant=on, target=ad, signal=p95_latency) ===
+  injected at 2026-09-17T18:23:16.472416+00:00, waiting 15s before first   MISSED   MISSED within 150s (other candidates: none)
+
+=== adManualGc cycle 5/5 (variant=on, target=ad, signal=p95_latency) ===
+  injected at 2026-09-17T18:25:58.598430+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['cart'])
+
+=== cartFailure cycle 1/5 (variant=100%, target=cart, signal=error_rate) ===
+  injected at 2026-09-17T18:28:45.109133+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['ad', 'payment', 'product-catalog'])
+
+=== cartFailure cycle 2/5 (variant=100%, target=cart, signal=error_rate) ===
+  injected at 2026-09-17T18:31:36.714300+00:00, waiting 15s before  MISSED within   MISSED within 150s (other candidates: ['ad', 'flagd', 'load-generator'])
+
+=== cartFailure cycle 3/5 (variant=100%, target=cart, signal=error_rate) ===
+  injected at 2026-09-17T18:34:22.479501+00:00, waiting 15  MISSED within 150s (ot  CONFIRMED (tier 2) after 140.6s
+
+=== cartFailure cycle 4/5 (variant=100%, target=cart, signal=error_rate) ===
+  injected at 2026-09-17T18:36:43.074224+00:00, waiting 15s before first scan...
+  CONFIRMED (tier 2) after 30.0s
+
+=== cartFailure cycle 5/5 (variant=100%, target=cart, signal=error_rate) ===
+  injected at 2026-09-17T18:37:13.090658+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['load-generator'])
+
+=== paymentFailure cycle 1/5 (variant=100%, target=payment, signal=error_rate) ===
+  injected at 2026-09-17T18:39:54.145569+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['cart', 'load-generator'])
+
+=== paymentFailure cycle 2/5 (variant=100%, target=payment, signal=error_rate) ===
+  injected at 2026-09-17T18:42:52.783957+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: none)
+
+=== paymentFailure cycle 3/5 (variant=100%, target=payment, signal=error_rate) ===
+  injected at 2026-09-17T18:45:32.615475+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: none)
+
+=== paymentFailure cycle 4/5 (variant=100%, target=payment, signal=error_rate) ===
+  injected at 2026-09-17T18:48:06.528632+00:00, waiting 15s before first scan...
+  detected but not tier-2-confirmed
+
+=== paymentFailure cycle 5/5 (variant=100%, target=payment, signal=error_rate) ===
+  injected at 2026-09-17T18:50:55.136940+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['accounting'])
+
+=== recommendationCacheFailure cycle 1/5 (variant=on, target=recommendation, signal=p95_latency) ===
+  injected at 2026-09-17T18:53:33.877652+00:00, waiting 15s before first scan...
+  MISSED wi  MISSED within 150s (other candidates: ['accounting', 'ad', 'frontend', 'frontend-proxy', 'product-catalog'])
+
+=== recommendationCacheFailure cycle 2/5 (variant=on, target=recommendation, signal=p95_latency) ===
+  injected at 2026-09-17T18:56:16.271170+00:00, waiting 15s before firs  detected   detected but not tier-2-confirmed
+
+=== recommendationCacheFailure cycle 3/5 (variant=on, target=recommendation, signal=p95_latency) ===
+  injected at 2026-09-17T18:58:56.208032+00:00, waiting 15s before firs  detected   detected but not tier-2-confirmed
+
+=== recommendationCacheFailure cycle 4/5 (variant=on, target=recommendation, signal=p95_latency) ===
+  injected at 2026-09-17T19:01:41.688514+00:00, waiting 15s before firs  detected   detected but not tier-2-confirmed
+
+=== recommendationCacheFailure cycle 5/5 (variant=on, target=recommendation, signal=p95_latency) ===
+  injected at 2026-09-17T19:04:37.913873+00:00, waiting 15s before firs  MISSED within 150s (other candidates: none)
+
+=== imageSlowLoad cycle 1/5 (variant=10sec, target=frontend, signal=p95_latency) ===
+  injected at 2026-09-17T19:07:29.740111+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['accounting'])
+
+=== imageSlowLoad cycle 2/5 (variant=10sec, target=frontend, signal=p95_latency) ===
+  injected at 2026-09-17T19:10:14.309561+00:00, waiting 15s before first scan...
+  MISSED wi  MISSED within 150s (other candidates: none)
+
+=== imageSlowLoad cycle 3/5 (variant=10sec, target=frontend, signal=p95_latency) ===
+  injected at 2026-09-17T19:12:46.118847+00:00, waiting 15s before firs  MISSED wi  MISSED within 150s (other candidates: none)
+
+=== imageSlowLoad cycle 4/5 (variant=10sec, target=frontend, signal=p95_latency) ===
+  injected at 2026-09-17T19:15:19.063568+00:00, waiting 15s before firs  MISSED wi  MISSED within 150s (other candidates: ['cart', 'payment'])
+
+=== imageSlowLoad cycle 5/5 (variant=10sec, target=frontend, signal=p95_latency) ===
+  injected at 2026-09-17T19:18:06.066020+00:00, waiting 15s before firs  MISSED within 150s (other candidates: ['ad'])
+
+=== intlShippingSlowdown cycle 1/5 (variant=10sec, target=shipping, signal=p95_latency) ===
+  injected at 2026-09-17T19:20:50.888375+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['accounting', 'cart', 'flagd', 'frontend'])
+
+=== intlShippingSlowdown cycle 2/5 (variant=10sec, target=shipping, signal=p95_latency) ===
+  injected at 2026-09-17T19:23:33.328785+00:00, waiting 15s before first scan...
+  MISSED wi  MISSED within 150s (other candidates: ['ad'])
+
+=== intlShippingSlowdown cycle 3/5 (variant=10sec, target=shipping, signal=p95_latency) ===
+  injected at 2026-09-17T19:26:13.723776+00:00, waiting 15s before firs  MISSED within 150s (other candidates: none)
+
+=== intlShippingSlowdown cycle 4/5 (variant=10sec, target=shipping, signal=p95_latency) ===
+  injected at 2026-09-17T19:28:51.760940+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['load-generator'])
+
+=== intlShippingSlowdown cycle 5/5 (variant=10sec, target=shipping, signal=p95_latency) ===
+  injected at 2026-09-17T19:31:23.757685+00:00, waiting 15s before first scan...
+  MISSED wi  MISSED within 150s (other candidates: ['load-generator'])
+
+=== productCatalogFailure cycle 1/5 (variant=on, target=product-catalog, signal=error_  injected at 2026-09-17T19:34:00.101746+00:00, waiting 15s before first scan...
+t scan...
