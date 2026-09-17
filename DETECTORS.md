@@ -7,9 +7,18 @@ pipeline — the **Detector** stage, which finds the anomaly in the first
 place. Four independent detection methods were built and validated
 against the Elastic OpenTelemetry demo stack (the "Astronomy Shop",
 `opentelemetry-demo/` — a git submodule). Each lives in its own top-level
-folder with its own detailed README; this document is the map between
-them, the shared demo setup they all depend on, and a single comparison
-table.
+folder with its own detailed README; this document is the narrative and
+comparison table tying them together.
+
+**For step-by-step run instructions, use one of these instead:**
+[`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md) (self-hosted Elasticsearch, no
+cloud account — what every number in §3 below was actually measured
+against) or [`RUNNING_ON_ELASTIC_CLOUD.md`](RUNNING_ON_ELASTIC_CLOUD.md)
+(same demo app and same four detectors, pointed at a real Elastic
+Cloud/Serverless deployment via `ES_URL`/`ES_API_KEY` instead). This
+document's §1–2 below cover the same setup in more narrative/historical
+detail (why each decision was made); the two `RUNNING_*` docs are the
+condensed versions to actually follow.
 
 No Correlator stage (the LLM-via-Bedrock reasoning step that would pick
 one cause from a detector's candidate list) exists in this repo yet —

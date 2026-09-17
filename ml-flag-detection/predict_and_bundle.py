@@ -17,10 +17,15 @@ not call or depend on a Remediator.
 
 Usage:
     python predict_and_bundle.py --out result.json
+
+Targets the local self-hosted Elasticsearch by default; override with
+ES_URL + ES_API_KEY (or ES_USERNAME/ES_PASSWORD) to point at Elastic
+Cloud/Serverless instead -- see ../RUNNING_ON_ELASTIC_CLOUD.md.
 """
 import argparse
 import base64
 import json
+import os
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -37,7 +42,7 @@ from collect_dataset import (
     START_LOCAL_ENV,
 )
 
-ES_URL = "http://localhost:9200"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 # Which service each flag's fault targets -- same mapping used by every
 # other detector's validation harness in this repo, for a consistent
@@ -52,14 +57,26 @@ FLAG_TARGET_SERVICE = {
 }
 
 
-def _es_password() -> str:
+def _local_password() -> str:
     for line in START_LOCAL_ENV.read_text().splitlines():
         if line.startswith("ES_LOCAL_PASSWORD="):
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("ES_LOCAL_PASSWORD not found")
+    raise RuntimeError(
+        "ES_LOCAL_PASSWORD not found -- set ES_API_KEY, or ES_URL + "
+        "ES_USERNAME + ES_PASSWORD, to target a non-local cluster"
+    )
 
 
-_AUTH_HEADER = "Basic " + base64.b64encode(f"elastic:{_es_password()}".encode()).decode()
+def _auth_header() -> str:
+    api_key = os.environ.get("ES_API_KEY")
+    if api_key:
+        return f"ApiKey {api_key}"
+    username = os.environ.get("ES_USERNAME", "elastic")
+    password = os.environ.get("ES_PASSWORD") or _local_password()
+    return "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+
+_AUTH_HEADER = _auth_header()
 
 
 def _esql(query: str) -> dict:

@@ -22,10 +22,15 @@ one after it, not just an exact-timestamp match.
 
 Usage:
     python validate_against_history.py
+
+Targets the local self-hosted Elasticsearch by default; override with
+ES_URL + ES_API_KEY (or ES_USERNAME/ES_PASSWORD) to point at Elastic
+Cloud/Serverless instead -- see ../RUNNING_ON_ELASTIC_CLOUD.md.
 """
 import base64
 import csv
 import json
+import os
 import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -34,7 +39,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
 DATASET_CSV = REPO_ROOT / "ml-flag-detection" / "dataset.csv"
-ES_URL = "http://localhost:9200"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 JOBS = ["otel-demo-latency", "otel-demo-error-rate"]
 SCORE_THRESHOLD = 10  # record_score; Elastic's own UI treats >=25 as "warning", >=50 "minor+"; using a lower bar here since our injected faults are short relative to the bucket
@@ -49,14 +54,26 @@ FLAG_TARGET_SERVICE = {
 }
 
 
-def _es_password() -> str:
+def _local_password() -> str:
     for line in START_LOCAL_ENV.read_text().splitlines():
         if line.startswith("ES_LOCAL_PASSWORD="):
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("ES_LOCAL_PASSWORD not found")
+    raise RuntimeError(
+        "ES_LOCAL_PASSWORD not found -- set ES_API_KEY, or ES_URL + "
+        "ES_USERNAME + ES_PASSWORD, to target a non-local cluster"
+    )
 
 
-_AUTH_HEADER = "Basic " + base64.b64encode(f"elastic:{_es_password()}".encode()).decode()
+def _auth_header() -> str:
+    api_key = os.environ.get("ES_API_KEY")
+    if api_key:
+        return f"ApiKey {api_key}"
+    username = os.environ.get("ES_USERNAME", "elastic")
+    password = os.environ.get("ES_PASSWORD") or _local_password()
+    return "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+
+_AUTH_HEADER = _auth_header()
 
 
 def _es_search(index: str, body: dict) -> dict:

@@ -2,9 +2,14 @@
 Lean, stdlib-only version of collect_dataset.py for finishing the last few
 flags on a memory-starved host: no pandas/numpy/requests imports, just
 urllib + json + csv, to minimize the process's own memory footprint.
+
+Targets the local self-hosted Elasticsearch by default; override with
+ES_URL + ES_API_KEY (or ES_USERNAME/ES_PASSWORD) to point at Elastic
+Cloud/Serverless instead -- see ../RUNNING_ON_ELASTIC_CLOUD.md.
 """
 import csv
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -14,7 +19,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGD_PATH = REPO_ROOT / "opentelemetry-demo" / "src" / "flagd" / "demo.flagd.json"
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
-ES_URL = "http://localhost:9200"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 SERVICES = [
     "ad", "cart", "checkout", "currency", "email", "frontend", "frontend-proxy",
@@ -31,11 +36,25 @@ def es_password():
     for line in START_LOCAL_ENV.read_text().splitlines():
         if line.startswith("ES_LOCAL_PASSWORD="):
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("ES_LOCAL_PASSWORD not found")
+    raise RuntimeError(
+        "ES_LOCAL_PASSWORD not found -- set ES_API_KEY, or ES_URL + "
+        "ES_USERNAME + ES_PASSWORD, to target a non-local cluster"
+    )
 
 
 import base64
-AUTH_HEADER = "Basic " + base64.b64encode(f"elastic:{es_password()}".encode()).decode()
+
+
+def _auth_header() -> str:
+    api_key = os.environ.get("ES_API_KEY")
+    if api_key:
+        return f"ApiKey {api_key}"
+    username = os.environ.get("ES_USERNAME", "elastic")
+    password = os.environ.get("ES_PASSWORD") or es_password()
+    return "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+
+AUTH_HEADER = _auth_header()
 
 
 def es_search(index: str, body: dict) -> dict:

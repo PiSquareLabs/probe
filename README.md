@@ -11,10 +11,14 @@ regardless of your Elastic licence.
 - **Elasticsearch + Kibana + elastic-connectors** via `docker-compose.yml`
 
 This is the **Remediator** stage of the full PROBE design (files the
-ticket once a cause is known). The **Detector** stage — three independent
+ticket once a cause is known). The **Detector** stage — four independent
 methods that find the anomaly in the first place, validated against a
 live OpenTelemetry demo — lives alongside it in this repo:
-[`DETECTORS.md`](DETECTORS.md).
+[`DETECTORS.md`](DETECTORS.md) (overview + comparison table),
+[`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md) (self-hosted, no cloud
+account), or [`RUNNING_ON_ELASTIC_CLOUD.md`](RUNNING_ON_ELASTIC_CLOUD.md)
+(same demo + detectors, pointed at a real Elastic Cloud/Serverless
+deployment).
 
 ---
 
