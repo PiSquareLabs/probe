@@ -1,6 +1,6 @@
 # Running everything locally (self-hosted Elasticsearch, no cloud account)
 
-This is the setup all four detectors in this repo were actually built and
+This is the setup all five detectors in this repo were actually built and
 validated against: the OpenTelemetry demo app, self-hosted Elasticsearch +
 Kibana + EDOT via Elastic's `start-local` installer, and each detector
 pointed at `localhost:9200`. See [`RUNNING_ON_ELASTIC_CLOUD.md`](RUNNING_ON_ELASTIC_CLOUD.md)
@@ -164,7 +164,7 @@ and is skipped everywhere.
 
 ## 4. Setting up and running each detector
 
-All four detectors default to `http://localhost:9200` with credentials
+All five detectors default to `http://localhost:9200` with credentials
 read from `opentelemetry-demo/elastic-start-local/.env` — nothing to
 configure for local use beyond having §2 running. (Setting `ES_URL`/
 `ES_API_KEY` switches every one of these to a remote cluster instead — see
@@ -292,6 +292,30 @@ elastic es ml close-job --job-id otel-demo-latency
 elastic es ml stop-datafeed --datafeed-id datafeed-otel-demo-error-rate
 elastic es ml close-job --job-id otel-demo-error-rate
 ```
+
+### 4e. `probe-two-tier-detector/` — two-tier pipeline (`PROBE-detector-spec.md`)
+
+```bash
+cd probe-two-tier-detector
+
+# One-shot scan: Tier 1 (z-score) shouts, Tier 2 (CHANGE_POINT) confirms every candidate
+python detector.py --out result.json
+
+# Full 11-flag validation battery (~20-30 min)
+python validate_against_demo.py --settle 15
+
+# Call Tier 2 on its own, the way a future Correlator would (e.g. one hop
+# further up the dependency graph from a service Tier 1 never shouted about)
+python change_point.py ad p95_latency --lookback 5 --bucket 2
+```
+
+No pip installs beyond the standard library. This is `probe-detector`'s
+z-score scan (Tier 1) gated by a `CHANGE_POINT` significance test per
+candidate (Tier 2) — no ranking, no root cause, exactly per the spec.
+**Avoid retesting the same flag twice within its own 10-minute lookback
+window** — the second activation's "baseline" ends up contaminated by the
+first, collapsing the z-score (see its README §4 for exactly how this was
+found).
 
 ## 5. Where the numbers come from
 

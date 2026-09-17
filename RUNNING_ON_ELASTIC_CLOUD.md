@@ -2,7 +2,7 @@
 
 Everything in this repo defaults to the local self-hosted Elasticsearch
 described in [`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md). This document is
-the same demo app and same four detectors, pointed at a real Elastic
+the same demo app and same five detectors, pointed at a real Elastic
 Cloud (or Serverless) deployment instead — no local Elasticsearch/Kibana
 containers at all.
 
@@ -126,8 +126,8 @@ With these set, `opentelemetry-demo/elastic-start-local/.env` (which
 holds the *local* Elasticsearch's generated password) is never read —
 you don't need `start-local` installed at all for this path.
 
-This applies to all four detectors identically — `ml-flag-detection/`,
-`causal-changepoint-detection/`, and `probe-detector/` all check the same
+This applies to all five detectors identically — `ml-flag-detection/`,
+`causal-changepoint-detection/`, `probe-detector/`, `elastic-ml-anomaly-detection/`, and `probe-two-tier-detector/` all check the same
 three variables in their respective `es_client`/query modules; see each
 file's module docstring for the one-line note pointing back here.
 
@@ -214,6 +214,20 @@ why — not a config mistake.
 python scan_current.py --minutes 30 --out result.json
 python validate_against_history.py
 ```
+
+### 4e. `probe-two-tier-detector/`
+
+```bash
+cd probe-two-tier-detector
+python detector.py --out result.json
+python validate_against_demo.py --settle 15
+```
+
+Identical to local once `ES_URL`/`ES_API_KEY` are exported — both tiers
+(`zscore_scan.py`'s `es_client.py` and `change_point.py`'s own auth
+helper) check the same three variables. `CHANGE_POINT`'s Cloud/Serverless
+availability note from §4b applies here too, since Tier 2 is built on the
+same ES|QL command.
 
 ## 5. Switching back to local
 

@@ -4,7 +4,7 @@ This repo's `backend/`+`frontend/` is the **Remediator** stage of PROBE
 (see `docs/RESEARCH.md`/`docs/ARCHITECTURE.md`): it files the Jira ticket
 once a root cause is known. This document covers the other side of that
 pipeline — the **Detector** stage, which finds the anomaly in the first
-place. Four independent detection methods were built and validated
+place. Five independent detection methods were built and validated
 against the Elastic OpenTelemetry demo stack (the "Astronomy Shop",
 `opentelemetry-demo/` — a git submodule). Each lives in its own top-level
 folder with its own detailed README; this document is the narrative and
@@ -14,7 +14,7 @@ comparison table tying them together.
 [`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md) (self-hosted Elasticsearch, no
 cloud account — what every number in §3 below was actually measured
 against) or [`RUNNING_ON_ELASTIC_CLOUD.md`](RUNNING_ON_ELASTIC_CLOUD.md)
-(same demo app and same four detectors, pointed at a real Elastic
+(same demo app and same detectors, pointed at a real Elastic
 Cloud/Serverless deployment via `ES_URL`/`ES_API_KEY` instead). This
 document's §1–2 below cover the same setup in more narrative/historical
 detail (why each decision was made); the two `RUNNING_*` docs are the
@@ -24,7 +24,10 @@ No Correlator stage (the LLM-via-Bedrock reasoning step that would pick
 one cause from a detector's candidate list) exists in this repo yet —
 `causal-changepoint-detection/`'s heuristic ranking is this project's
 current best stand-in for it, and its README is candid about where that
-heuristic falls short (see its §5a).
+heuristic falls short (see its §5a). `probe-two-tier-detector/` follows
+[`PROBE-detector-spec.md`](PROBE-detector-spec.md)'s design instead, which
+deliberately removes ranking from the Detector entirely and leaves it for
+a Correlator that doesn't exist in this repo yet.
 
 | Folder | Method | Needs training data? | Names a single root cause? |
 |---|---|---|---|
@@ -32,12 +35,19 @@ heuristic falls short (see its §5a).
 | `causal-changepoint-detection/` | Unsupervised statistical change-point detection (ES|QL `CHANGE_POINT`) + call-graph ranking | No | Yes — explicit Layer 4 ranking |
 | `probe-detector/` | Unsupervised z-score anomaly scoring over bucketed aggregations (implements the "Detector" stage from `idea/probe.pdf`'s 3-agent PROBE design) | No | No — deliberately over-inclusive; a Correlator stage would rank these |
 | `elastic-ml-anomaly-detection/` | Elastic's own built-in ML anomaly detection jobs (`high_mean`/`high_count`, partitioned by service), set up via the `elasticsearch-anomaly-detection` Claude skill | No (learns online) | No |
+| `probe-two-tier-detector/` | Two-tier pipeline per `PROBE-detector-spec.md`: `probe-detector`'s z-score scan (Tier 1, shouts candidates) gated by `causal-changepoint-detection`'s `CHANGE_POINT` run per-candidate (Tier 2, confirms with a p-value) | No | No — outputs `loudest`/`earliest` only, explicitly not a rank or a cause |
 
 `elastic-ml-anomaly-detection/` is the odd one out: its default 5-minute
 bucket span turned out to be a poor match for this repo's 25-40s
 fault-injection windows (0/11 flags detected — see its README §3 for the
 full, honest analysis of why, confirmed at both the record and bucket
 level, not just a threshold-tuning issue).
+
+`probe-two-tier-detector/` traded recall for precision by design: gating
+every Tier 1 candidate behind a Tier 2 `CHANGE_POINT` confirmation caught
+fewer flags (2/11, both tier-2-confirmed with p-values as low as 1e-86)
+than `probe-detector`'s ungated z-score alone (5/11) — see its README §5
+for the honest trade-off analysis.
 
 `.claude/skills/` in this repo has all 26 skills from
 [`elastic/agent-skills`](https://github.com/elastic/agent-skills)
@@ -47,13 +57,17 @@ fourth detector above) and `elasticsearch-anomaly-detection-explainer`
 against real, sustained traffic rather than this repo's short synthetic
 faults).
 
-All four query the same Elasticsearch instance, use the same flagd faults
+All five query the same Elasticsearch instance, use the same flagd faults
 for validation, and independently rediscovered the same "flagd's own
 OpenFeature client pollutes error-rate/latency signals" bug — see each
 folder's README for the specific fix, and `probe-detector/README.md` for
-the cross-project note tying all three together (and the flagd-noise fix that a fourth, `elastic-ml-anomaly-detection/`, also had to apply to its own datafeed queries).
+the cross-project note tying them together (`elastic-ml-anomaly-detection/`
+had to apply the same fix to its own datafeed queries independently;
+`probe-two-tier-detector/` avoided it by reusing `probe-detector/`'s
+already-fixed query code directly, and applying the same exclusion
+proactively in its own new `change_point.py`).
 
-## 1. Standing up the demo (required for all four detectors)
+## 1. Standing up the demo (required for all five detectors)
 
 ### 1a. Requirements
 
@@ -147,7 +161,7 @@ depth in `ml-flag-detection/README.md`:
 
 ### 1d. flagd fault injection (how every detector below gets tested)
 
-All four detectors are validated the same way: edit
+All five detectors are validated the same way: edit
 `opentelemetry-demo/src/flagd/demo.flagd.json`, change one flag's
 `defaultVariant` to its "on" value, wait, observe, then set it back to
 `"off"`. flagd watches this file and hot-reloads it — no restart needed.
@@ -237,6 +251,24 @@ python scan_current.py --out result.json   # live one-shot scan, same shared sch
 value** — it's a real, confirmed finding (bucket-span/fault-duration
 mismatch), not evidence the method doesn't work in general.
 
+### `probe-two-tier-detector/` — two-tier pipeline per `PROBE-detector-spec.md`
+
+```bash
+cd probe-two-tier-detector
+python detector.py --out result.json             # one-shot scan
+python validate_against_demo.py --settle 15       # full 11-flag battery
+python change_point.py ad p95_latency             # Tier 2 called standalone, as a future Correlator would
+```
+
+No pip installs beyond the standard library. Tier 1 (`zscore_scan.py`) is
+cheap (5 queries, same as `probe-detector`); Tier 2 (`change_point.py`)
+only runs once per candidate Tier 1 shouted, not a blanket scan of every
+service, so a full scan stays affordable enough for the 12s polling
+interval its validator uses. **Read that folder's README §5 before
+comparing its 2/11 directly against `probe-detector`'s 5/11** — gating
+every candidate behind a Tier 2 significance test traded recall for
+precision by design, not by accident.
+
 ## 3. Comparison table
 
 Same 11 flags, same demo stack, same host — but **not** an apples-to-apples
@@ -245,20 +277,20 @@ fault's own target service appeared *somewhere* in the method's output;
 "Correctly named as THE cause" only applies to the two methods that
 attempt that (changepoint's ranking, and the classifier's prediction).
 
-| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) | Elastic ML (`elastic-ml-anomaly-detection`) |
-|---|---|---|---|---|---|
-| `adFailure` | `ad` | test-set miss (0 precision — no error-rate signal observed) | missed (`cart`/`currency` flagged instead) | **detected, 26.1s** | missed |
-| `adHighCpu` | `ad` | **correct (2/2 test)** | detected, but ranked #2 behind `cart` | **detected, 26.5s** | missed |
-| `adManualGc` | `ad` | **correct (1/1 test)** | detected, but ranked #2 behind `cart` (named correctly in an earlier isolated spot-check — see §3a) | **detected, 25.7s** | missed (score 0.0 — see its README §3) |
-| `cartFailure` | `cart` | correct via a correlated feature, not error rate (see caveat in its README) | **named root cause** | missed (flagged `payment`/`quote` instead) | missed |
-| `paymentFailure` | `payment` | test-set miss | missed (ranked `recommendation` #1) | **detected, 25.9s** | missed |
-| `recommendationCacheFailure` | `recommendation` | **correct (1/1 test)** | missed (ranked `product-catalog` #1) | **detected, 87.2s** | missed |
-| `imageSlowLoad` | `frontend` | **correct (1/1 test)** | detected, but ranked #2+ behind `product-catalog` | missed (flagged `recommendation` instead) | missed |
-| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed | missed |
-| `productCatalogFailure` | `product-catalog` | test-set miss | detected, but ranked #2+ behind `ad` | missed | missed |
-| `emailMemoryLeak` | `email` | not observable — `email` emits no OTel memory metric in this fork | missed entirely (same reason — no metric to change on) | missed (same reason) | missed |
-| `kafkaQueueProblems` | *(none)* | not directly attributable | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope |
-| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** | **0/11 detected** — its 5-minute bucket span dilutes these 25-40s faults below any threshold; see its README §3 for why this is a granularity mismatch, not a broken job |
+| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) | Elastic ML (`elastic-ml-anomaly-detection`) | Two-Tier Detector (`probe-two-tier-detector`) |
+|---|---|---|---|---|---|---|
+| `adFailure` | `ad` | test-set miss (0 precision — no error-rate signal observed) | missed (`cart`/`currency` flagged instead) | **detected, 26.1s** | missed | missed (Tier 1 never shouted) |
+| `adHighCpu` | `ad` | **correct (2/2 test)** | detected, but ranked #2 behind `cart` | **detected, 26.5s** | missed | **confirmed, 29.4s** |
+| `adManualGc` | `ad` | **correct (1/1 test)** | detected, but ranked #2 behind `cart` (named correctly in an earlier isolated spot-check — see §3a) | **detected, 25.7s** | missed (score 0.0 — see its README §3) | **confirmed, 32.4s** |
+| `cartFailure` | `cart` | correct via a correlated feature, not error rate (see caveat in its README) | **named root cause** | missed (flagged `payment`/`quote` instead) | missed | missed (Tier 1 never shouted) |
+| `paymentFailure` | `payment` | test-set miss | missed (ranked `recommendation` #1) | **detected, 25.9s** | missed | missed (Tier 1 never shouted) |
+| `recommendationCacheFailure` | `recommendation` | **correct (1/1 test)** | missed (ranked `product-catalog` #1) | **detected, 87.2s** | missed | missed (Tier 1 never shouted) |
+| `imageSlowLoad` | `frontend` | **correct (1/1 test)** | detected, but ranked #2+ behind `product-catalog` | missed (flagged `recommendation` instead) | missed | missed (Tier 1 never shouted) |
+| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed | missed | missed (Tier 1 never shouted) |
+| `productCatalogFailure` | `product-catalog` | test-set miss | detected, but ranked #2+ behind `ad` | missed | missed | missed (Tier 1 never shouted) |
+| `emailMemoryLeak` | `email` | not observable — `email` emits no OTel memory metric in this fork | missed entirely (same reason — no metric to change on) | missed (same reason) | missed | missed (same reason) |
+| `kafkaQueueProblems` | *(none)* | not directly attributable | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope |
+| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** | **0/11 detected** — its 5-minute bucket span dilutes these 25-40s faults below any threshold; see its README §3 for why this is a granularity mismatch, not a broken job | **2/11 detected, both tier-2-confirmed** (both `ad`-targeting flags with the strongest signal in the whole repo; every miss was Tier 1 never shouting, not a Tier 2 rejection — see its README §5 for the recall/precision trade-off of gating on a significance test) |
 
 ### 3a. Changepoint detector's full-battery result: a real regression worth understanding
 
