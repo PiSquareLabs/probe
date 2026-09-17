@@ -1,0 +1,16 @@
+{
+  "datafeed_id": "datafeed-otel-demo-error-rate",
+  "job_id": "otel-demo-error-rate",
+  "indices": ["traces-*.otel-default"],
+  "query": {
+    "bool": {
+      "filter": [
+        {"term": {"attributes.processor.event": "transaction"}},
+        {"term": {"attributes.event.outcome": "failure"}}
+      ],
+      "must_not": [
+        {"wildcard": {"name": "flagd.evaluation.v1.Service*"}}
+      ]
+    }
+  }
+}
