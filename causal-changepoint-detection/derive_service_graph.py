@@ -15,10 +15,15 @@ reconnects within the same service).
 
 Usage:
     python derive_service_graph.py --minutes 30 --out service_graph.json
+
+Targets the local self-hosted Elasticsearch by default; override with
+ES_URL + ES_API_KEY (or ES_USERNAME/ES_PASSWORD) to point at Elastic
+Cloud/Serverless instead -- see ../RUNNING_ON_ELASTIC_CLOUD.md.
 """
 import argparse
 import base64
 import json
+import os
 import sys
 import urllib.request
 from collections import Counter
@@ -26,17 +31,29 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
-ES_URL = "http://localhost:9200"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 
 def es_password():
     for line in START_LOCAL_ENV.read_text().splitlines():
         if line.startswith("ES_LOCAL_PASSWORD="):
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("ES_LOCAL_PASSWORD not found")
+    raise RuntimeError(
+        "ES_LOCAL_PASSWORD not found -- set ES_API_KEY, or ES_URL + "
+        "ES_USERNAME + ES_PASSWORD, to target a non-local cluster"
+    )
 
 
-AUTH_HEADER = "Basic " + base64.b64encode(f"elastic:{es_password()}".encode()).decode()
+def _auth_header() -> str:
+    api_key = os.environ.get("ES_API_KEY")
+    if api_key:
+        return f"ApiKey {api_key}"
+    username = os.environ.get("ES_USERNAME", "elastic")
+    password = os.environ.get("ES_PASSWORD") or es_password()
+    return "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+
+AUTH_HEADER = _auth_header()
 
 
 def es_post(path, body):

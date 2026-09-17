@@ -5,9 +5,14 @@ windows from Elasticsearch, labeled by which flag was active.
 
 Usage:
     python collect_dataset.py --out dataset.csv
+
+Targets the local self-hosted Elasticsearch by default; override with
+ES_URL + ES_API_KEY (or ES_USERNAME/ES_PASSWORD) to point at Elastic
+Cloud/Serverless instead -- see ../RUNNING_ON_ELASTIC_CLOUD.md.
 """
 import argparse
 import json
+import os
 import time
 import warnings
 from datetime import datetime, timezone
@@ -21,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGD_PATH = REPO_ROOT / "opentelemetry-demo" / "src" / "flagd" / "demo.flagd.json"
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
 
-ES_URL = "http://localhost:9200"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
 # Requested flags -> the variant that switches the failure/behavior "on".
 # NOTE: productCatalogLockContention does not exist in this fork's
@@ -56,10 +61,20 @@ def es_password():
     for line in START_LOCAL_ENV.read_text().splitlines():
         if line.startswith("ES_LOCAL_PASSWORD="):
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("ES_LOCAL_PASSWORD not found in elastic-start-local/.env")
+    raise RuntimeError(
+        "ES_LOCAL_PASSWORD not found -- set ES_API_KEY, or ES_URL + "
+        "ES_USERNAME + ES_PASSWORD, to target a non-local cluster"
+    )
 
 
-AUTH = ("elastic", es_password())
+_ES_API_KEY = os.environ.get("ES_API_KEY")
+if _ES_API_KEY:
+    AUTH = None
+    AUTH_HEADERS = {"Authorization": f"ApiKey {_ES_API_KEY}"}
+else:
+    AUTH = (os.environ.get("ES_USERNAME", "elastic"),
+            os.environ.get("ES_PASSWORD") or es_password())
+    AUTH_HEADERS = {}
 
 
 def set_flag(name: str, variant: str):
@@ -78,7 +93,7 @@ def reset_all_flags():
 def es_search(index: str, body: dict) -> dict:
     resp = requests.get(
         f"{ES_URL}/{index}/_search",
-        auth=AUTH, json=body, timeout=30,
+        auth=AUTH, headers=AUTH_HEADERS, json=body, timeout=30,
         params={"ignore_unavailable": "true"},
     )
     resp.raise_for_status()
