@@ -15,8 +15,11 @@ for the validation harness in validate_against_demo.py).
 Usage:
     python detector.py
 """
+import argparse
 import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 
 from anomaly import score_anomalies
 from es_client import esql_rows
@@ -51,18 +54,51 @@ def scan(verbose: bool = False) -> list[dict]:
     return anomalies
 
 
+def load_graph_edges() -> list[dict]:
+    graph_path = Path(__file__).parent / "service_graph.json"
+    return json.loads(graph_path.read_text())["edges"]
+
+
+def build_result(anomalies: list[dict]) -> dict:
+    """The shareable output of this detector. Deliberately has no
+    "named_root_cause" field: per ../idea/probe.pdf's architecture this
+    detector's job stops at an over-inclusive candidate list (traces,
+    metrics, AND logs -- log_error_burst is one of the SCANS above) plus
+    the service dependency graph a downstream Correlator/Remediator would
+    need to reason about which candidate actually caused the incident.
+    This module only produces that result; it does not call or depend on
+    a Remediator."""
+    return {
+        "detector": "probe-detector",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "service_dependency_graph": {"edges": load_graph_edges()},
+        "anomalies": anomalies,
+        "named_root_cause": None,  # out of scope for this stage -- see docstring
+    }
+
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default=None, help="write the shareable result JSON to this path")
+    args = ap.parse_args()
+
     anomalies = scan(verbose=True)
+    result = build_result(anomalies)
+
     if not anomalies:
         print("No anomalies detected.")
-        return
-    anomalies.sort(key=lambda a: -a["deviation_score"])
-    print(f"{len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:\n")
-    for a in anomalies:
-        print(f"  z={a['deviation_score']:6.2f}  {a['service']:18s} {a['signal_type']:20s} "
-              f"baseline={a['baseline']}  current={a['current']}  @{a['window']}")
-    print()
-    print(json.dumps(anomalies, indent=2))
+    else:
+        anomalies_sorted = sorted(anomalies, key=lambda a: -a["deviation_score"])
+        print(f"{len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:\n")
+        for a in anomalies_sorted:
+            print(f"  z={a['deviation_score']:6.2f}  {a['service']:18s} {a['signal_type']:20s} "
+                  f"baseline={a['baseline']}  current={a['current']}  @{a['window']}")
+        print()
+        print(json.dumps(anomalies_sorted, indent=2))
+
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, indent=2))
+        print(f"\nWrote shareable result to {args.out}")
 
 
 if __name__ == "__main__":

@@ -161,6 +161,42 @@ Elasticsearch for windows that are *already recorded* in `dataset.csv`
 stack to still be generating traffic) — used here to fix a bug retroactively
 without re-running the whole collection (see §5).
 
+### 3a. Live prediction with shared result output
+
+The trained model only ever saw trace+metric features (§1) — adding logs
+as a *training* feature would need a full re-collection pass. Instead,
+`predict_and_bundle.py` scores one live window against the existing model
+and attaches two things the model itself doesn't produce: a live,
+non-training-feature log-error check over the same window, and the
+service dependency graph (`service_graph.json`, copied from
+`../causal-changepoint-detection/`'s empirically-derived graph):
+
+```bash
+python predict_and_bundle.py --model model.joblib --out result.json
+```
+
+Schema:
+
+```json
+{
+  "detector": "ml-flag-detection",
+  "generated_at": "...",
+  "predicted_label": "imageSlowLoad",
+  "class_probabilities": {"imageSlowLoad": 0.22, "...": ...},
+  "log_error_summary": [{"service.name": "...", "error_count": N}],
+  "service_dependency_graph": {"edges": [{"caller": "...", "callee": "...", "count": N}]},
+  "named_root_cause": "frontend"
+}
+```
+
+`named_root_cause` is the predicted flag's target service (via the same
+flag→service map every other detector's validator uses), or `null` when
+the prediction is `"baseline"`. Given §6's 55% test accuracy, treat a
+single prediction as a hint, not a verdict — this is most useful run
+repeatedly over a live incident, not as a one-shot answer. This module
+only *produces* the result file; it does not call, know about, or depend
+on any Remediator.
+
 ## 4. File reference
 
 | File | What it is |
@@ -168,6 +204,8 @@ without re-running the whole collection (see §5).
 | `collect_dataset.py` | Main collector: toggles flags, samples ES, writes `dataset.csv`. Resumable via `--append`. |
 | `finish_remaining.py` | stdlib-only fallback collector for one flag/variant/N-cycles at a time, for memory-constrained hosts. |
 | `reextract_features.py` | Re-derives features from already-recorded ES windows with a corrected query, without re-running the stack. Resumable. |
+| `predict_and_bundle.py` | Scores one live window against the trained model, bundles a live log-error check + the service dependency graph, writes a shareable result JSON (see §3a). |
+| `service_graph.json` | Copy of `../causal-changepoint-detection/service_graph.json` — same demo stack, same graph. |
 | `train_classifier.py` | Trains/evaluates the RandomForest, saves model + report + confusion matrix + feature importances. |
 | `dataset.csv` | **Final, corrected** labeled dataset — 65 rows × (162 features + `label` + `window_start` + `window_end`). |
 | `model.joblib` | Trained model: `joblib.load(...)` returns `{"model": RandomForestClassifier, "feature_cols": [...], "labels": [...]}`. |
