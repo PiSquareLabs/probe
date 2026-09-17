@@ -1,0 +1,21 @@
+{
+  "job_id": "otel-demo-latency",
+  "description": "High-mean span duration per service, excluding flagd's own streaming RPC noise",
+  "analysis_config": {
+    "bucket_span": "5m",
+    "detectors": [
+      {
+        "function": "high_mean",
+        "field_name": "duration",
+        "partition_field_name": "resource.attributes.service.name",
+        "detector_description": "unusually high mean span duration per service"
+      }
+    ]
+  },
+  "data_description": {
+    "time_field": "@timestamp"
+  },
+  "analysis_limits": {
+    "model_memory_limit": "64mb"
+  }
+}

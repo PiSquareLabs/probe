@@ -1,0 +1,15 @@
+{
+  "datafeed_id": "datafeed-otel-demo-latency",
+  "job_id": "otel-demo-latency",
+  "indices": ["traces-*.otel-default"],
+  "query": {
+    "bool": {
+      "filter": [
+        {"term": {"attributes.processor.event": "transaction"}}
+      ],
+      "must_not": [
+        {"wildcard": {"name": "flagd.evaluation.v1.Service*"}}
+      ]
+    }
+  }
+}

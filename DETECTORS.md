@@ -4,7 +4,7 @@ This repo's `backend/`+`frontend/` is the **Remediator** stage of PROBE
 (see `docs/RESEARCH.md`/`docs/ARCHITECTURE.md`): it files the Jira ticket
 once a root cause is known. This document covers the other side of that
 pipeline — the **Detector** stage, which finds the anomaly in the first
-place. Three independent detection methods were built and validated
+place. Four independent detection methods were built and validated
 against the Elastic OpenTelemetry demo stack (the "Astronomy Shop",
 `opentelemetry-demo/` — a git submodule). Each lives in its own top-level
 folder with its own detailed README; this document is the map between
@@ -22,14 +22,29 @@ heuristic falls short (see its §5a).
 | `ml-flag-detection/` | Supervised ML (`RandomForestClassifier`) on aggregated telemetry windows | Yes (65 labeled windows) | Implicitly (predicts the class = the flag) |
 | `causal-changepoint-detection/` | Unsupervised statistical change-point detection (ES|QL `CHANGE_POINT`) + call-graph ranking | No | Yes — explicit Layer 4 ranking |
 | `probe-detector/` | Unsupervised z-score anomaly scoring over bucketed aggregations (implements the "Detector" stage from `idea/probe.pdf`'s 3-agent PROBE design) | No | No — deliberately over-inclusive; a Correlator stage would rank these |
+| `elastic-ml-anomaly-detection/` | Elastic's own built-in ML anomaly detection jobs (`high_mean`/`high_count`, partitioned by service), set up via the `elasticsearch-anomaly-detection` Claude skill | No (learns online) | No |
 
-All three query the same Elasticsearch instance, use the same flagd faults
+`elastic-ml-anomaly-detection/` is the odd one out: its default 5-minute
+bucket span turned out to be a poor match for this repo's 25-40s
+fault-injection windows (0/11 flags detected — see its README §3 for the
+full, honest analysis of why, confirmed at both the record and bucket
+level, not just a threshold-tuning issue).
+
+`.claude/skills/` in this repo has all 26 skills from
+[`elastic/agent-skills`](https://github.com/elastic/agent-skills)
+installed, including `elasticsearch-anomaly-detection` (used to build the
+fourth detector above) and `elasticsearch-anomaly-detection-explainer`
+(the natural next step for interpreting a job's results once it's running
+against real, sustained traffic rather than this repo's short synthetic
+faults).
+
+All four query the same Elasticsearch instance, use the same flagd faults
 for validation, and independently rediscovered the same "flagd's own
 OpenFeature client pollutes error-rate/latency signals" bug — see each
 folder's README for the specific fix, and `probe-detector/README.md` for
-the cross-project note tying all three together.
+the cross-project note tying all three together (and the flagd-noise fix that a fourth, `elastic-ml-anomaly-detection/`, also had to apply to its own datafeed queries).
 
-## 1. Standing up the demo (required for all three detectors)
+## 1. Standing up the demo (required for all four detectors)
 
 ### 1a. Requirements
 
@@ -123,7 +138,7 @@ depth in `ml-flag-detection/README.md`:
 
 ### 1d. flagd fault injection (how every detector below gets tested)
 
-All three detectors are validated the same way: edit
+All four detectors are validated the same way: edit
 `opentelemetry-demo/src/flagd/demo.flagd.json`, change one flag's
 `defaultVariant` to its "on" value, wait, observe, then set it back to
 `"off"`. flagd watches this file and hot-reloads it — no restart needed.
@@ -189,6 +204,30 @@ No pip installs beyond the standard library. A single scan is 5 lightweight
 aggregation queries, so this comfortably supports the 10s polling interval
 `validate_against_demo.py` uses.
 
+### `elastic-ml-anomaly-detection/` — Elastic's own ML anomaly detection jobs
+
+Requires the [`elastic` CLI](https://github.com/elastic/cli)
+(`npm install -g @elastic/cli`) and a context pointed at your cluster
+(`elastic config context add ...`, `elastic config current-context set ...`
+— see that folder's README §1). The two jobs (`otel-demo-latency`,
+`otel-demo-error-rate`) are already defined in `jobs/*.json`:
+
+```bash
+cd elastic-ml-anomaly-detection
+elastic es ml put-job --input-file jobs/job-latency.json
+elastic es ml put-datafeed --input-file jobs/datafeed-latency.json
+elastic es ml open-job --job-id otel-demo-latency
+elastic es ml start-datafeed --datafeed-id datafeed-otel-demo-latency
+# repeat for jobs/job-error-rate.json / datafeed-error-rate.json
+
+python validate_against_history.py   # cross-references ../ml-flag-detection/dataset.csv's known windows
+python scan_current.py --out result.json   # live one-shot scan, same shared schema as the other three
+```
+
+**Read that folder's README §3 before trusting a 0/11 result at face
+value** — it's a real, confirmed finding (bucket-span/fault-duration
+mismatch), not evidence the method doesn't work in general.
+
 ## 3. Comparison table
 
 Same 11 flags, same demo stack, same host — but **not** an apples-to-apples
@@ -197,20 +236,20 @@ fault's own target service appeared *somewhere* in the method's output;
 "Correctly named as THE cause" only applies to the two methods that
 attempt that (changepoint's ranking, and the classifier's prediction).
 
-| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) |
-|---|---|---|---|---|
-| `adFailure` | `ad` | test-set miss (0 precision — no error-rate signal observed) | missed (`cart`/`currency` flagged instead) | **detected, 26.1s** |
-| `adHighCpu` | `ad` | **correct (2/2 test)** | detected, but ranked #2 behind `cart` | **detected, 26.5s** |
-| `adManualGc` | `ad` | **correct (1/1 test)** | detected, but ranked #2 behind `cart` (named correctly in an earlier isolated spot-check — see §3a) | **detected, 25.7s** |
-| `cartFailure` | `cart` | correct via a correlated feature, not error rate (see caveat in its README) | **named root cause** | missed (flagged `payment`/`quote` instead) |
-| `paymentFailure` | `payment` | test-set miss | missed (ranked `recommendation` #1) | **detected, 25.9s** |
-| `recommendationCacheFailure` | `recommendation` | **correct (1/1 test)** | missed (ranked `product-catalog` #1) | **detected, 87.2s** |
-| `imageSlowLoad` | `frontend` | **correct (1/1 test)** | detected, but ranked #2+ behind `product-catalog` | missed (flagged `recommendation` instead) |
-| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed |
-| `productCatalogFailure` | `product-catalog` | test-set miss | detected, but ranked #2+ behind `ad` | missed |
-| `emailMemoryLeak` | `email` | not observable — `email` emits no OTel memory metric in this fork | missed entirely (same reason — no metric to change on) | missed (same reason) |
-| `kafkaQueueProblems` | *(none)* | not directly attributable | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope |
-| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** |
+| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) | Elastic ML (`elastic-ml-anomaly-detection`) |
+|---|---|---|---|---|---|
+| `adFailure` | `ad` | test-set miss (0 precision — no error-rate signal observed) | missed (`cart`/`currency` flagged instead) | **detected, 26.1s** | missed |
+| `adHighCpu` | `ad` | **correct (2/2 test)** | detected, but ranked #2 behind `cart` | **detected, 26.5s** | missed |
+| `adManualGc` | `ad` | **correct (1/1 test)** | detected, but ranked #2 behind `cart` (named correctly in an earlier isolated spot-check — see §3a) | **detected, 25.7s** | missed (score 0.0 — see its README §3) |
+| `cartFailure` | `cart` | correct via a correlated feature, not error rate (see caveat in its README) | **named root cause** | missed (flagged `payment`/`quote` instead) | missed |
+| `paymentFailure` | `payment` | test-set miss | missed (ranked `recommendation` #1) | **detected, 25.9s** | missed |
+| `recommendationCacheFailure` | `recommendation` | **correct (1/1 test)** | missed (ranked `product-catalog` #1) | **detected, 87.2s** | missed |
+| `imageSlowLoad` | `frontend` | **correct (1/1 test)** | detected, but ranked #2+ behind `product-catalog` | missed (flagged `recommendation` instead) | missed |
+| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed | missed |
+| `productCatalogFailure` | `product-catalog` | test-set miss | detected, but ranked #2+ behind `ad` | missed | missed |
+| `emailMemoryLeak` | `email` | not observable — `email` emits no OTel memory metric in this fork | missed entirely (same reason — no metric to change on) | missed (same reason) | missed |
+| `kafkaQueueProblems` | *(none)* | not directly attributable | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope |
+| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** | **0/11 detected** — its 5-minute bucket span dilutes these 25-40s faults below any threshold; see its README §3 for why this is a granularity mismatch, not a broken job |
 
 ### 3a. Changepoint detector's full-battery result: a real regression worth understanding
 

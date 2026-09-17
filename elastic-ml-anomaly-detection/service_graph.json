@@ -1,0 +1,119 @@
+{
+  "edges": [
+    {
+      "caller": "frontend-proxy",
+      "callee": "frontend",
+      "count": 26299
+    },
+    {
+      "caller": "frontend",
+      "callee": "product-catalog",
+      "count": 11039
+    },
+    {
+      "caller": "frontend-proxy",
+      "callee": "image-provider",
+      "count": 6975
+    },
+    {
+      "caller": "frontend",
+      "callee": "cart",
+      "count": 4470
+    },
+    {
+      "caller": "frontend",
+      "callee": "recommendation",
+      "count": 1821
+    },
+    {
+      "caller": "recommendation",
+      "callee": "product-catalog",
+      "count": 1778
+    },
+    {
+      "caller": "load-generator",
+      "callee": "frontend-proxy",
+      "count": 1440
+    },
+    {
+      "caller": "frontend",
+      "callee": "currency",
+      "count": 1327
+    },
+    {
+      "caller": "frontend-proxy",
+      "callee": "flagd",
+      "count": 1000
+    },
+    {
+      "caller": "frontend",
+      "callee": "ad",
+      "count": 928
+    },
+    {
+      "caller": "shipping",
+      "callee": "quote",
+      "count": 238
+    },
+    {
+      "caller": "frontend",
+      "callee": "shipping",
+      "count": 217
+    },
+    {
+      "caller": "checkout",
+      "callee": "currency",
+      "count": 48
+    },
+    {
+      "caller": "checkout",
+      "callee": "cart",
+      "count": 37
+    },
+    {
+      "caller": "checkout",
+      "callee": "shipping",
+      "count": 36
+    },
+    {
+      "caller": "checkout",
+      "callee": "product-catalog",
+      "count": 33
+    },
+    {
+      "caller": "ad",
+      "callee": "flagd",
+      "count": 33
+    },
+    {
+      "caller": "frontend",
+      "callee": "checkout",
+      "count": 20
+    },
+    {
+      "caller": "checkout",
+      "callee": "payment",
+      "count": 17
+    },
+    {
+      "caller": "cart",
+      "callee": "flagd",
+      "count": 17
+    },
+    {
+      "caller": "checkout",
+      "callee": "email",
+      "count": 17
+    },
+    {
+      "caller": "recommendation",
+      "callee": "flagd",
+      "count": 11
+    },
+    {
+      "caller": "payment",
+      "callee": "flagd",
+      "count": 2
+    }
+  ]
+}

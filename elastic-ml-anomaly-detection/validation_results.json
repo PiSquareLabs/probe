@@ -1,0 +1,398 @@
+[
+  {
+    "flag": "adFailure",
+    "target": "ad",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T05:53:47.887304+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T05:54:59.091391+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T05:56:06.916351+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T05:57:14.164190+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T05:58:22.783872+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "adHighCpu",
+    "target": "ad",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T05:59:30.634022+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:00:43.190255+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:01:51.093863+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:03:22.868788+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:04:30.435132+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "adManualGc",
+    "target": "ad",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:05:38.386220+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:06:45.904357+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:17:58.622425+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:19:07.017360+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:20:14.923563+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "cartFailure",
+    "target": "cart",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:21:22.590903+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:22:30.280192+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:23:38.152571+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:24:46.138077+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:25:53.892297+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "paymentFailure",
+    "target": "payment",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:27:08.776202+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:28:16.776718+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:29:25.628504+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:30:33.309600+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:31:41.392637+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "recommendationCacheFailure",
+    "target": "recommendation",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:32:49.951761+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:33:58.138384+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:35:06.459407+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:36:14.647008+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:37:22.106934+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "imageSlowLoad",
+    "target": "frontend",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:44:07.947107+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:45:15.247102+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:46:22.782847+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:47:30.517987+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:48:38.162246+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "intlShippingSlowdown",
+    "target": "shipping",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T06:49:45.415744+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:50:53.190608+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:52:00.877460+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:53:08.150992+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T06:54:15.888330+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "productCatalogFailure",
+    "target": "product-catalog",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T07:14:14.141168+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:15:07.520709+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:15:50.883748+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:16:33.659154+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:17:16.683065+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "emailMemoryLeak",
+    "target": "email",
+    "windows": 5,
+    "detected": false,
+    "best_score": 0.0,
+    "window_details": [
+      {
+        "window_start": "2026-09-15T07:18:09.702234+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:18:52.872542+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:19:35.524112+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:20:18.600149+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      },
+      {
+        "window_start": "2026-09-15T07:21:01.214002+00:00",
+        "score": 0.0,
+        "job": null,
+        "detected": false
+      }
+    ]
+  },
+  {
+    "flag": "kafkaQueueProblems",
+    "target": null,
+    "detected": false,
+    "windows": 0
+  }
+]
