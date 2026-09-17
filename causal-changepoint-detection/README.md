@@ -114,6 +114,31 @@ error as "no signal" — **use this while developing**; the two real bugs
 found while building this (documented in §5) both silently produced "no
 change points found" until `--verbose` was added.
 
+### 3a. Shared result output (for a downstream Correlator/Remediator)
+
+`--out result.json` writes this detector's full shareable output: every
+anomalous service, which signal(s) flagged it (`latency`, `error_rate`, and
+now `log_error_burst` — logs-*.otel-default ERROR/FATAL volume, scanned
+with the same per-service `CHANGE_POINT` approach as traces), the
+service dependency graph (`service_graph.json`'s edges, embedded directly
+so a consumer doesn't need this repo's file layout), and this detector's
+own root-cause ranking. Schema:
+
+```json
+{
+  "detector": "causal-changepoint-detection",
+  "generated_at": "...",
+  "service_dependency_graph": {"edges": [{"caller": "...", "callee": "...", "count": N}]},
+  "anomalies": [{"service": "...", "signals": ["latency", "log_error_burst"], "events": [...]}],
+  "root_cause_ranking": [{"service": "...", "score": 0.7, ...}],
+  "named_root_cause": "..."
+}
+```
+
+This module only *produces* that file — it does not call, know about, or
+depend on any Remediator. What (if anything) reads it is out of scope
+here.
+
 ## 4. Validation against a known, injected fault
 
 Following the same "prove it before you trust it" approach as

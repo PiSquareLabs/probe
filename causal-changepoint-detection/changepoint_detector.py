@@ -107,6 +107,38 @@ def change_points_for_service(service: str, stat_expr: str,
     return rows
 
 
+def log_change_points_for_service(service: str, lookback_min: int, bucket_sec: int,
+                                   verbose: bool = False):
+    """Same idea as change_points_for_service, but over logs-*.otel-default
+    ERROR/FATAL volume instead of traces -- a service can be logging
+    failures (a caught exception, a retry loop, a dependency timeout it
+    swallows) without that necessarily showing up as a traced span error,
+    so this is a genuinely different signal, not a duplicate of the
+    traces-based error_rate check above."""
+    query = (
+        f'FROM logs-*.otel-default '
+        f'| WHERE @timestamp >= NOW() - {lookback_min} minutes '
+        f'AND resource.attributes.service.name == "{service}" '
+        f'AND severity_text IN ("ERROR", "FATAL") '
+        f'| EVAL bucket = DATE_TRUNC({bucket_sec} seconds, @timestamp) '
+        f'| STATS m = COUNT(*) BY bucket '
+        f'| SORT bucket ASC '
+        f'| CHANGE_POINT m ON bucket '
+        f'| WHERE type IS NOT NULL'
+    )
+    try:
+        result = esql(query)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        if "not enough" in body.lower() or "changepoint" in body.lower():
+            return []
+        if verbose:
+            print(f"    [{service}] log query error: {body[:300]}")
+        return []
+    cols = [c["name"] for c in result.get("columns", [])]
+    return [dict(zip(cols, v)) for v in result.get("values", [])]
+
+
 def find_candidates(lookback_min: int, bucket_sec: int, verbose: bool = False):
     candidates = {}
     for svc in SERVICES:
@@ -115,8 +147,11 @@ def find_candidates(lookback_min: int, bucket_sec: int, verbose: bool = False):
         err = change_points_for_service(
             svc, 'AVG(CASE(attributes.event.outcome == "failure", 1.0, 0.0))',
             lookback_min, bucket_sec, verbose)
+        logerr = log_change_points_for_service(svc, lookback_min, bucket_sec, verbose)
         events = [("latency", t, ty, p) for (t, ty, p) in lat if p < SIGNIFICANCE_THRESHOLD]
         events += [("error_rate", t, ty, p) for (t, ty, p) in err if p < SIGNIFICANCE_THRESHOLD]
+        events += [("log_error_burst", row["bucket"], row["type"], row["pvalue"])
+                   for row in logerr if row["pvalue"] < SIGNIFICANCE_THRESHOLD]
         if events:
             # keep the earliest, most significant event for ranking
             events.sort(key=lambda e: (e[1], e[3]))
@@ -128,11 +163,14 @@ def find_candidates(lookback_min: int, bucket_sec: int, verbose: bool = False):
     return candidates
 
 
-def load_graph():
+def load_graph_edges():
     graph_path = Path(__file__).parent / "service_graph.json"
-    edges = json.loads(graph_path.read_text())["edges"]
+    return json.loads(graph_path.read_text())["edges"]
+
+
+def load_graph():
     downstream = {}
-    for e in edges:
+    for e in load_graph_edges():
         downstream.setdefault(e["caller"], set()).add(e["callee"])
     return downstream
 
@@ -192,41 +230,79 @@ def _to_epoch(iso_ts: str) -> float:
     return datetime.fromisoformat(iso_ts.replace("Z", "+00:00")).timestamp()
 
 
+def build_result(candidates: dict, ranked: list, lookback_min: int, bucket_sec: int) -> dict:
+    """The shareable output of this detector: everything a downstream
+    consumer (e.g. a Correlator/Remediator agent) would need without
+    re-running any queries itself -- which services are anomalous, on
+    which signal(s) (latency / trace error rate / log error burst), the
+    service dependency graph used for ranking, and this detector's own
+    best guess at a single root cause. This module only produces this
+    result; nothing here calls or depends on a Remediator."""
+    from datetime import datetime, timezone
+    return {
+        "detector": "causal-changepoint-detection",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "lookback_minutes": lookback_min,
+        "bucket_seconds": bucket_sec,
+        "service_dependency_graph": {"edges": load_graph_edges()},
+        "anomalies": [
+            {
+                "service": svc,
+                "signals": sorted({e[0] for e in info["all_events"]}),
+                "earliest_change_time": info["earliest_change_time"],
+                "best_pvalue": info["best_pvalue"],
+                "events": [
+                    {"signal": e[0], "bucket": e[1], "change_type": e[2], "pvalue": e[3]}
+                    for e in info["all_events"]
+                ],
+            }
+            for svc, info in candidates.items()
+        ],
+        "root_cause_ranking": ranked,
+        "named_root_cause": ranked[0]["service"] if ranked else None,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lookback", type=int, default=30, help="minutes to look back")
     ap.add_argument("--bucket", type=int, default=30, help="bucket size in seconds")
     ap.add_argument("--verbose", action="store_true", help="print query errors instead of swallowing them")
+    ap.add_argument("--out", default=None, help="write the shareable result JSON to this path")
     args = ap.parse_args()
 
     print(f"Scanning {len(SERVICES)} services over the last {args.lookback} minutes "
-          f"({args.bucket}s buckets)...")
+          f"({args.bucket}s buckets), traces + logs...")
     candidates = find_candidates(args.lookback, args.bucket, args.verbose)
+
+    downstream = load_graph()
+    ranked = rank_candidates(candidates, downstream) if candidates else []
+    result = build_result(candidates, ranked, args.lookback, args.bucket)
 
     if not candidates:
         print("No significant change points found in any service. "
               "System looks stable (or the lookback window is too short/long).")
-        return
+    else:
+        print(f"\n{len(candidates)} service(s) with a significant change point:")
+        for svc, info in candidates.items():
+            print(f"  {svc:18s} earliest change @ {info['earliest_change_time']}  "
+                  f"p={info['best_pvalue']:.2e}  signals={sorted({e[0] for e in info['all_events']})}")
 
-    print(f"\n{len(candidates)} service(s) with a significant change point:")
-    for svc, info in candidates.items():
-        print(f"  {svc:18s} earliest change @ {info['earliest_change_time']}  "
-              f"p={info['best_pvalue']:.2e}  events={[e[0] for e in info['all_events']]}")
+        print("\nCausal ranking (highest score = most likely root cause):")
+        for r in ranked:
+            print(f"  {r['score']:.3f}  {r['service']:18s} "
+                  f"earliness={r['earliness']:.2f}  "
+                  f"depended_on_by_{r['depended_on_by']}_other_candidates  "
+                  f"p={r['best_pvalue']:.2e}")
 
-    downstream = load_graph()
-    ranked = rank_candidates(candidates, downstream)
+        top = ranked[0]
+        print(f"\n>>> Named root cause: {top['service']} "
+              f"(score={top['score']:.3f}, {top['depended_on_by']} other "
+              f"anomalous service(s) depend on it, earliest to shift)")
 
-    print("\nCausal ranking (highest score = most likely root cause):")
-    for r in ranked:
-        print(f"  {r['score']:.3f}  {r['service']:18s} "
-              f"earliness={r['earliness']:.2f}  "
-              f"depended_on_by_{r['depended_on_by']}_other_candidates  "
-              f"p={r['best_pvalue']:.2e}")
-
-    top = ranked[0]
-    print(f"\n>>> Named root cause: {top['service']} "
-          f"(score={top['score']:.3f}, {top['depended_on_by']} other "
-          f"anomalous service(s) depend on it, earliest to shift)")
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, indent=2))
+        print(f"\nWrote shareable result to {args.out}")
 
 
 if __name__ == "__main__":

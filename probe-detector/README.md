@@ -92,6 +92,31 @@ reachable at `localhost:9200`, credentials in
 `../opentelemetry-demo/elastic-start-local/.env`, services receiving
 traffic from the bundled load-generator.
 
+### Shared result output (for a downstream Correlator/Remediator)
+
+`python detector.py --out result.json` writes this detector's full
+shareable output — the deliberately over-inclusive anomaly list (already
+covering `log_error_burst`, one of the five `SCANS` in `detector.py`, so
+logs were never missing from this detector's own signals) plus the
+service dependency graph (`service_graph.json`, copied from
+`../causal-changepoint-detection/`'s empirically-derived graph — same
+demo stack, so the same graph applies). Schema:
+
+```json
+{
+  "detector": "probe-detector",
+  "generated_at": "...",
+  "service_dependency_graph": {"edges": [{"caller": "...", "callee": "...", "count": N}]},
+  "anomalies": [{"service": "...", "signal_type": "log_error_burst", "deviation_score": 4.9, ...}],
+  "named_root_cause": null
+}
+```
+
+`named_root_cause` is always `null` here, deliberately — per
+`../idea/probe.pdf`'s architecture, picking one cause from this list is
+the Correlator's job, not the Detector's. This module only *produces*
+this file; it does not call, know about, or depend on any Remediator.
+
 ## 3. Validation results
 
 PROBE's stated target metric (`../idea/probe.pdf` page 2): *"Root-caused 8
