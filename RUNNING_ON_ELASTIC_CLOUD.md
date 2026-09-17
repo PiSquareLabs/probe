@@ -16,6 +16,11 @@ same detection behavior in principle (same index/mapping shape, same
 queries) — but re-run the validators (§4) yourself before trusting a
 Cloud-specific number.
 
+A real (partial) cutover was done since this was first written — one flag
+(`adHighCpu`), 1 cycle + 3 null windows, against a live Serverless
+Observability project — and it surfaced four practical gotchas worth
+reading before you do this yourself. See §6 at the end of this document.
+
 ## 1. Requirements
 
 - An **Elastic Cloud** deployment or **Serverless Observability project**
@@ -252,3 +257,74 @@ them) — every script falls back to `http://localhost:9200` and the local
 ```bash
 unset ES_URL ES_API_KEY ES_USERNAME ES_PASSWORD
 ```
+
+## 6. What actually happened the first time this was done for real
+
+### 6a. Switching an *already-running* local stack to Cloud recreates more than the collector
+
+The theory (§2c) is that only `docker-compose.elastic-self-hosted.yml`
+references local Elasticsearch, so dropping it from the compose file list
+should surgically recreate just `otel-collector`. In practice, on a stack
+that was already `up -d` with the self-hosted overlay, re-running
+`up -d` with a **different set of `-f` files** changed Compose's merged
+config hash for every service, not just the one whose environment
+actually differed — 19 of 24 containers were stopped/recreated, not 1.
+None of it was destructive (all came back healthy), but budget for a
+full-stack blip, not a single-container swap, if you're doing this to a
+stack that's already running rather than a fresh `up -d`.
+
+### 6b. Two demo stacks pointed at the same Elastic project mix their telemetry silently
+
+If this host (or any host) has more than one OTel demo instance, check
+**every** instance's `otel-collector` for `ELASTIC_OTLP_ENDPOINT` before
+trusting a single project's data. Two independent stacks (this repo's
+`opentelemetry-demo/` and an unrelated `astronomy-shop-elastic/` checkout)
+were both found pointed at the same project, under different API keys,
+with identical service names (`cart`, `checkout`, `ad`, ...). Every
+detector query here filters only by `service.name` — there is no way to
+tell which stack produced a given span once they're mixed in the same
+data stream. This isn't a hypothetical: it was the actual explanation for
+an unexpectedly-populated query result the very first connectivity check
+here returned, before any demo app of this repo's had sent a single span.
+Check with:
+```
+FROM traces-*.otel-default | WHERE @timestamp > NOW() - 5 minutes
+| STATS count = COUNT(*) BY service.name | SORT count DESC
+```
+against a **freshly stopped** version of your own stack — if it still
+returns rows, something else is also writing to this project.
+
+### 6c. Don't trust a false-shout / null-window number taken right after a cutover or a fault cycle
+
+A null-window (no-fault) validation pass run ~10 minutes after the
+container-recreate in §6a, and immediately after a single fault cycle,
+returned 56 false shouts across 3×90s windows — a number that looked
+alarming until the pattern was inspected: several shouts (`cart`/memory,
+`accounting`/memory) showed z-scores *strictly decreasing* window over
+window, the signature of containers still warming up after a mass
+recreate, not steady-state noise. One (`ad`/cpu, z=275, confirmed at Tier
+2) was almost certainly the just-finished fault's own recovery tail still
+sitting inside the 30s/10min lookback window — the same
+back-to-back-retest contamination documented in
+`probe-two-tier-detector/README.md` §4, just hitting a null-window test
+instead of a repeat-fault test. **Wait at least 15-20 minutes past both
+the last container restart and the last injected fault before trusting a
+false-shout number** — otherwise you're measuring cutover/recovery noise,
+not the detector's real baseline.
+
+### 6d. A "stale image" bug can resurface independently on the Cloud/Elastic-tagged images
+
+`RUNNING_LOCALLY.md` §2c documents `frontend-proxy`/`load-generator`/
+`checkout`/`shipping` needing an explicit rebuild on the plain
+`ghcr.io/open-telemetry/demo:*` tags. The same failure mode (an existing
+image under the same tag not getting rebuilt automatically) recurred
+independently on `ghcr.io/elastic/opentelemetry-demo:latest-product-catalog`
+during this cutover — its `/bin/grpc_health_probe` binary was missing
+entirely, permanently failing its healthcheck (`OCI runtime exec failed:
+... no such file or directory`) even though the service itself was
+serving traffic normally the whole time (verified via a live ES|QL
+count). Fix is the same as the local-image cases: `docker compose build
+<service>` then recreate. Don't assume an "unhealthy" container is
+actually broken without checking whether it's producing real telemetry
+first — Docker's healthcheck and the application's actual health are two
+different questions.
