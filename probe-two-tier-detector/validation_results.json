@@ -1,0 +1,79 @@
+[
+  {
+    "flag": "adFailure",
+    "target": "ad",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "adHighCpu",
+    "target": "ad",
+    "detected": true,
+    "confirmed": true,
+    "seconds": 29.4
+  },
+  {
+    "flag": "adManualGc",
+    "target": "ad",
+    "detected": true,
+    "confirmed": true,
+    "seconds": 32.4
+  },
+  {
+    "flag": "cartFailure",
+    "target": "cart",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "paymentFailure",
+    "target": "payment",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "recommendationCacheFailure",
+    "target": "recommendation",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "imageSlowLoad",
+    "target": "frontend",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "intlShippingSlowdown",
+    "target": "shipping",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "productCatalogFailure",
+    "target": "product-catalog",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "emailMemoryLeak",
+    "target": "email",
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  },
+  {
+    "flag": "kafkaQueueProblems",
+    "target": null,
+    "detected": false,
+    "confirmed": false,
+    "seconds": null
+  }
+]

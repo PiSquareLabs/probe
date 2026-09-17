@@ -1,6 +1,6 @@
 # Running everything locally (self-hosted Elasticsearch, no cloud account)
 
-This is the setup all four detectors in this repo were actually built and
+This is the setup all five detectors in this repo were actually built and
 validated against: the OpenTelemetry demo app, self-hosted Elasticsearch +
 Kibana + EDOT via Elastic's `start-local` installer, and each detector
 pointed at `localhost:9200`. See [`RUNNING_ON_ELASTIC_CLOUD.md`](RUNNING_ON_ELASTIC_CLOUD.md)
@@ -164,7 +164,7 @@ and is skipped everywhere.
 
 ## 4. Setting up and running each detector
 
-All four detectors default to `http://localhost:9200` with credentials
+All five detectors default to `http://localhost:9200` with credentials
 read from `opentelemetry-demo/elastic-start-local/.env` — nothing to
 configure for local use beyond having §2 running. (Setting `ES_URL`/
 `ES_API_KEY` switches every one of these to a remote cluster instead — see
@@ -292,6 +292,69 @@ elastic es ml close-job --job-id otel-demo-latency
 elastic es ml stop-datafeed --datafeed-id datafeed-otel-demo-error-rate
 elastic es ml close-job --job-id otel-demo-error-rate
 ```
+
+### 4e. `probe-two-tier-detector/` — two-tier pipeline (`PROBE-detector-spec.md`)
+
+```bash
+cd probe-two-tier-detector
+
+# One-shot scan: Tier 1 (z-score) shouts, Tier 2 (CHANGE_POINT) confirms every candidate
+python detector.py --out result.json
+
+# Full 11-flag validation battery (~20-30 min)
+python validate_against_demo.py --settle 15
+
+# Call Tier 2 on its own, the way a future Correlator would (e.g. one hop
+# further up the dependency graph from a service Tier 1 never shouted about)
+python change_point.py ad p95_latency --lookback 5 --bucket 2
+```
+
+No pip installs beyond the standard library. This is `probe-detector`'s
+z-score scan (Tier 1) gated by a `CHANGE_POINT` significance test per
+candidate (Tier 2) — no ranking, no root cause, exactly per the spec.
+**Avoid retesting the same flag twice within its own 10-minute lookback
+window** — the second activation's "baseline" ends up contaminated by the
+first, collapsing the z-score (see its README §4 for exactly how this was
+found).
+
+### 4f. `probe-two-tier-detector-v2/` — Tier 1 fix (`FIX-tier1-zscore.md`)
+
+```bash
+cd probe-two-tier-detector-v2
+
+# 9 unit tests, no ES needed — dilution/contended-baseline/persistence/error-floor/partial-bucket
+python test_zscore.py
+
+# One-shot scan (streak starts at 0 -- persistence needs repeated calls, see --loop)
+python detector.py --out result.json
+
+# Long-running scan, so persistence (2 consecutive shouts) can actually fire
+python detector.py --loop 10
+
+# Full battery per FIX-tier1-zscore.md §6: 5 cycles/flag + 3 null windows
+python validate_against_demo.py
+```
+
+No pip installs beyond the standard library. Tier 1 rebuilt (median/MAD
+z-score, no window dilution, persistence, error-count floor); Tier 2
+(`change_point.py`) copied unchanged from v1. **Read its README §5 before
+citing its numbers** — the battery there was intentionally stopped after
+8 of 11 flags to free the demo stack for `probe-two-tier-detector-v3/`'s
+own run; it's real partial data, not a completed battery.
+
+### 4g. `probe-two-tier-detector-v3/` — Tier 2 fixes
+
+```bash
+cd probe-two-tier-detector-v3
+python test_zscore.py           # same 9 Tier-1 tests, unchanged from v2
+python test_change_point.py     # 3 new Tier-2 tests (insufficient-data, earliest-break, cascade batching)
+python detector.py --out result.json
+python validate_against_demo.py
+```
+
+Builds on v2 unchanged for Tier 1; fixes `change_point.py` and its caller
+in `detector.py` — see its README for the full list of changes once its
+battery completes.
 
 ## 5. Where the numbers come from
 
