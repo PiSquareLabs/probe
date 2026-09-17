@@ -67,10 +67,11 @@ per-signal bucket/lookback timing (`cpu`/`memory` no longer forced through
 a 2s/5min window built for traces), insufficient-data distinguished from a
 genuine no-break, earliest-significant-break selection instead of
 lowest-p-value, and cascade query batching. On the same 8 flags v2's
-partial battery covered, confirmation jumped from v2's 1/8 to **5/7
-completed flags** (same flags that stalled in v2 — `adHighCpu`,
-`adManualGc`, `paymentFailure`, `recommendationCacheFailure` — now confirm
-as often as they detect). See its README §3-4 for the full numbers.
+partial battery covered, confirmation jumped from v2's 1/8 to **5/8**
+(same flags that stalled in v2 — `adHighCpu`, `adManualGc`,
+`paymentFailure`, `recommendationCacheFailure` — now confirm as often as
+they detect; `cartFailure` was v2's one partial win and confirms even more
+reliably in v3). See its README §3-4 for the full numbers.
 
 `.claude/skills/` in this repo has all 26 skills from
 [`elastic/agent-skills`](https://github.com/elastic/agent-skills)
@@ -332,7 +333,7 @@ fault's own target service appeared *somewhere* in the method's output;
 "Correctly named as THE cause" only applies to the two methods that
 attempt that (changepoint's ranking, and the classifier's prediction).
 
-| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) | Elastic ML (`elastic-ml-anomaly-detection`) | Two-Tier Detector (`probe-two-tier-detector`) | Two-Tier v2 (`probe-two-tier-detector-v2`, partial: 5 cycles, 8/11 flags) | Two-Tier v3 (`probe-two-tier-detector-v3`, partial: 5 cycles, 7/8 flags) |
+| Flag | Target | ML classifier (`ml-flag-detection`) | Changepoint detector (`causal-changepoint-detection`) | PROBE Detector (`probe-detector`) | Elastic ML (`elastic-ml-anomaly-detection`) | Two-Tier Detector (`probe-two-tier-detector`) | Two-Tier v2 (`probe-two-tier-detector-v2`, partial: 5 cycles, 8/11 flags) | Two-Tier v3 (`probe-two-tier-detector-v3`, 5 cycles, 8/8 flags in scope) |
 |---|---|---|---|---|---|---|---|---|
 | `adFailure` | `ad` | test-set miss (0 precision — no error-rate signal observed) | missed (`cart`/`currency` flagged instead) | **detected, 26.1s** | missed | missed (Tier 1 never shouted) | missed, 0/5 cycles | missed, 0/5 cycles |
 | `adHighCpu` | `ad` | **correct (2/2 test)** | detected, but ranked #2 behind `cart` | **detected, 26.5s** | missed | **confirmed, 29.4s** | detected 2/5, confirmed 0/5 | **confirmed 4/5** |
@@ -341,11 +342,11 @@ attempt that (changepoint's ranking, and the classifier's prediction).
 | `paymentFailure` | `payment` | test-set miss | missed (ranked `recommendation` #1) | **detected, 25.9s** | missed | missed (Tier 1 never shouted) | detected 1/5, confirmed 0/5 | **confirmed 2/5** |
 | `recommendationCacheFailure` | `recommendation` | **correct (1/1 test)** | missed (ranked `product-catalog` #1) | **detected, 87.2s** | missed | missed (Tier 1 never shouted) | detected 3/5, confirmed 0/5 | **confirmed 2/5** |
 | `imageSlowLoad` | `frontend` | **correct (1/1 test)** | detected, but ranked #2+ behind `product-catalog` | missed (flagged `recommendation` instead) | missed | missed (Tier 1 never shouted) | missed, 0/5 cycles | missed, 0/5 cycles |
-| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed | missed | missed (Tier 1 never shouted) | missed, 0/5 cycles | missed 0/4, 5th cycle in progress at write time |
+| `intlShippingSlowdown` | `shipping` | not enough traffic to `checkout`/`shipping` for a signal | missed entirely (`shipping` never a candidate) | missed | missed | missed (Tier 1 never shouted) | missed, 0/5 cycles | missed, 0/5 cycles |
 | `productCatalogFailure` | `product-catalog` | test-set miss | detected, but ranked #2+ behind `ad` | missed | missed | missed (Tier 1 never shouted) | not run (battery stopped early) | not run (out of 8-flag comparison scope) |
 | `emailMemoryLeak` | `email` | not observable — `email` emits no OTel memory metric in this fork | missed entirely (same reason — no metric to change on) | missed (same reason) | missed | missed (same reason) | not run (battery stopped early) | not run (out of 8-flag comparison scope) |
 | `kafkaQueueProblems` | *(none)* | not directly attributable | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable — no signal in this detector's scope | not applicable | not applicable |
-| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** | **0/11 detected** — its 5-minute bucket span dilutes these 25-40s faults below any threshold; see its README §3 for why this is a granularity mismatch, not a broken job | **2/11 detected, both tier-2-confirmed** (both `ad`-targeting flags with the strongest signal in the whole repo; every miss was Tier 1 never shouting, not a Tier 2 rejection — see its README §5 for the recall/precision trade-off of gating on a significance test) | **4/8 completed flags detected, 1/8 confirmed** (partial battery — see its README §5); real recall gain over v1 (3 flags now shout at Tier 1 that never did before), but confirmation gains lag, pointing at Tier 2 as the next bottleneck | **5/7 completed flags detected, 5/7 confirmed** (partial battery, in progress — see its README §3); same Tier 1 as v2, Tier 2 timing/insufficient-data/earliest-break fixes turned every one of v2's "shouts but won't confirm" flags into a confirmation |
+| **Overall** | | **55% test accuracy** (11/20 stratified test rows, 12 classes) | **5/11 detected; only 1/11 correctly named as #1 root cause** (see §3a — this got notably worse than an earlier single-flag spot-check, for reasons worth reading) | **5/11 detected, mean 38.3s** | **0/11 detected** — its 5-minute bucket span dilutes these 25-40s faults below any threshold; see its README §3 for why this is a granularity mismatch, not a broken job | **2/11 detected, both tier-2-confirmed** (both `ad`-targeting flags with the strongest signal in the whole repo; every miss was Tier 1 never shouting, not a Tier 2 rejection — see its README §5 for the recall/precision trade-off of gating on a significance test) | **4/8 completed flags detected, 1/8 confirmed** (partial battery — see its README §5); real recall gain over v1 (3 flags now shout at Tier 1 that never did before), but confirmation gains lag, pointing at Tier 2 as the next bottleneck | **5/8 detected, 5/8 confirmed** (see its README §3-4); same Tier 1 as v2, Tier 2 timing/insufficient-data/earliest-break fixes turned every one of v2's "shouts but won't confirm" flags into a confirmation — every remaining miss (`adFailure`, `imageSlowLoad`, `intlShippingSlowdown`) is a Tier 1 miss unaffected by this fix, not a Tier 2 rejection |
 
 ### 3a. Changepoint detector's full-battery result: a real regression worth understanding
 

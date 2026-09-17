@@ -50,7 +50,7 @@ python validate_against_demo.py  # full battery
 No pip installs beyond the standard library. Unit tests: 9/9 + 3/3 pass,
 no Elasticsearch needed.
 
-## 3. Validation battery: partial, 7 of 8 flags complete (in progress)
+## 3. Validation battery: 8 of 8 flags complete
 
 Run against the same 8 flags `../probe-two-tier-detector-v2/`'s partial
 battery covered (`productCatalogFailure`, `emailMemoryLeak`,
@@ -67,10 +67,10 @@ battery:
 | `paymentFailure` | `payment` | `error_rate` | 2/5 | **2/5** | 1/5 detected, 0/5 confirmed |
 | `recommendationCacheFailure` | `recommendation` | `p95_latency` | 3/5 | **2/5** | 3/5 detected, 0/5 confirmed |
 | `imageSlowLoad` | `frontend` | `p95_latency` | 0/5 | 0/5 | 0/5 |
-| `intlShippingSlowdown` | `shipping` | `p95_latency` | 0/4 so far, 5th cycle still running at write time | 0/4 so far | 0/5 |
+| `intlShippingSlowdown` | `shipping` | `p95_latency` | 0/5 | 0/5 | 0/5 |
 
-**Per-flag summary, 7 of 8 flags completed:** detected any-tier in at
-least one cycle: **5/7**. Tier-2-confirmed in at least one cycle: **5/7**
+**Per-flag summary, 8 of 8 flags completed:** detected any-tier in at
+least one cycle: **5/8**. Tier-2-confirmed in at least one cycle: **5/8**
 — the same 5 flags (`adHighCpu`, `adManualGc`, `cartFailure`,
 `paymentFailure`, `recommendationCacheFailure`), every one of which now
 confirms as often as it detects.
@@ -86,21 +86,24 @@ for traces), every one of those confirms in most cycles it detects —
 `paymentFailure` from 0/5 to 2/5, `recommendationCacheFailure` from 0/5 to
 2/5.
 
-`adFailure` and `imageSlowLoad` still miss every cycle — both are Tier 1
-misses (the fault signal itself is too weak/low-traffic to clear the
-z-score threshold in the first place), not Tier 2 rejections, and outside
-this fix's scope (Tier 1 is unchanged from v2 here).
+`adFailure`, `imageSlowLoad`, and `intlShippingSlowdown` still miss every
+cycle — all three are Tier 1 misses (the fault signal itself is too
+weak/low-traffic to clear the z-score threshold in the first place), not
+Tier 2 rejections, and outside this fix's scope (Tier 1 is unchanged from
+v2 here). This matches v2's own result on these same three flags exactly
+(0/5 on all three in both versions), consistent with the fix being
+correctly scoped to Tier 2 only.
 
-**Insufficient-data vs. genuine-no-break breakdown**: not yet captured in
-this partial run — `change_point.INSUFFICIENT_DATA_COUNTS` needs to be
-read out at the end of a completed battery (see `validate_against_demo.py`'s
-module docstring). Whoever finishes this battery (the remaining
-`intlShippingSlowdown` cycle, plus `productCatalogFailure`/
-`emailMemoryLeak`/`kafkaQueueProblems`/3 nulls if extending past the
-8-flag comparison scope) should log that counter's contents alongside the
-final results — that number is what would explain the "shouts but won't
-confirm" pattern quantitatively, on top of the qualitative confirmation
-this table already shows.
+The battery was intentionally stopped after these 8 flags (matching v2's
+own partial scope, for a clean comparison) — `productCatalogFailure`,
+`emailMemoryLeak`, `kafkaQueueProblems`, and the 3 null windows were not
+run. **Insufficient-data vs. genuine-no-break breakdown** (§6's requested
+`change_point.INSUFFICIENT_DATA_COUNTS` readout) also wasn't captured —
+the battery process was stopped via `Stop-Process` rather than allowed to
+exit normally, so the counter's in-memory state was never printed.
+Re-running with `--only` limited to a couple of the confirmed-slow flags
+and reading `change_point.INSUFFICIENT_DATA_COUNTS` at the end would
+close that gap if needed.
 
 ## 4. Comparison across all three versions
 
@@ -108,11 +111,14 @@ this table already shows.
 |---|---|---|---|
 | Tier 1 | mean/stdev, 60s diluted window, no persistence | median/MAD, 30s undiluted window, persistence + count floor | unchanged from v2 |
 | Tier 2 | 2s/5min for every signal, lowest-p-value pick, `None` on both no-break and insufficient-data | unchanged from v1 | per-signal timing, earliest-break pick, insufficient-data surfaced distinctly, cascade batching |
-| Detected any-tier (partial batteries, non-identical flag counts) | 2/11 (1 cycle each) | 4/8 (5 cycles each) | 5/7 completed flags (5 cycles each) |
-| Tier-2-confirmed | 2/11 | 1/8 | **5/7** |
+| Detected any-tier (partial batteries, same 8-flag scope for v2/v3) | 2/11 (1 cycle each) | 4/8 (5 cycles each) | **5/8** (5 cycles each) |
+| Tier-2-confirmed | 2/11 | 1/8 | **5/8** |
 
-The jump from v2's 1/8 to v3's 5/7 confirmed, on the same flags, same Tier
-1 code, is attributable to Tier 2 alone — strong evidence the "insufficient
-data disguised as no break" + "one-size-fits-all bucket timing" diagnosis
-in this fix was the actual bottleneck, not a coincidence of a quieter
-battery run.
+The jump from v2's 1/8 to v3's 5/8 confirmed, on the same 8 flags, same
+Tier 1 code, is attributable to Tier 2 alone — strong evidence the
+"insufficient data disguised as no break" + "one-size-fits-all bucket
+timing" diagnosis in this fix was the actual bottleneck, not a coincidence
+of a quieter battery run. Every flag that missed in both v2 and v3
+(`adFailure`, `imageSlowLoad`, `intlShippingSlowdown`) missed at Tier 1,
+before Tier 2 ever ran — this fix cannot help a candidate Tier 1 never
+shouted about in the first place.

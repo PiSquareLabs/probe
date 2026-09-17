@@ -158,3 +158,11 @@ Testing 11 flags x 5 cycles, plus 3 null windows. All flags start 'off'.
 
 === intlShippingSlowdown cycle 5/5 (variant=10sec, target=shipping, signal=p95_latency) ===
   injected at 2026-09-17T20:54:15.974236+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: none)
+
+=== productCatalogFailure cycle 1/5 (variant=on, target=product-catalog, signal=error_rate) ===
+  injected at 2026-09-17T20:56:54.344426+00:00, waiting 15s before first scan...
+  MISSED within 150s (other candidates: ['fraud-detection'])
+
+=== productCatalogFailure cycle 2/5 (variant=on, target=product-catalog, signal=error_rate) ===
+  injected at 2026-09-17T20:59:32.885015+00:00, waiting 15s before first scan...
