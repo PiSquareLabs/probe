@@ -117,8 +117,15 @@ class Remediator:
         # exact same problem as _id: `SORT _score` inside a FORK branch
         # fails with "Unknown column [_score]" unless it's requested via
         # METADATA too -- found live, same crash pattern as the _id bug.
+        #
+        # _index is a THIRD metadata column needed here: FUSE's default
+        # row-matching key is `_index`, and without requesting it via
+        # METADATA the command fails outright with "FUSE requires a key
+        # column, default [_index] column not found" -- found live, same
+        # root cause class as the two bugs above (ES|QL only exposes
+        # document metadata columns that were explicitly asked for).
         query = """
-            FROM probe-memory METADATA _id, _score
+            FROM probe-memory METADATA _id, _index, _score
             | WHERE kind == "runbook" AND status != "demoted"
             | FORK
                 ( WHERE MATCH(semantic, ?symptom) | SORT _score DESC | LIMIT 10 )
