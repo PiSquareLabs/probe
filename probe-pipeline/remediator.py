@@ -79,15 +79,24 @@ class Remediator:
 
     @staticmethod
     def _stage0_exact(fp: Fingerprint) -> list[dict]:
+        # METADATA _id + RENAME: `id` is not a real field on probe-memory
+        # docs (only signature.*/status/etc. are) -- it's the document id
+        # Elasticsearch tracks as metadata, which ES|QL only exposes if
+        # explicitly requested via `METADATA _id` on FROM. Omitting this
+        # produces a real, previously-undiscovered "Unknown column [id]"
+        # failure the moment a genuine candidate exists to query for --
+        # caught live when the first real incident this project produced
+        # (a frontend/error_rate intermittent) finally reached this stage.
         query = """
-            FROM probe-memory
+            FROM probe-memory METADATA _id
             | WHERE kind == "runbook"
               AND status != "demoted"
               AND signature.change_point    == ?change_point
               AND signature.metric          == ?metric
               AND signature.loudest_service == ?loudest
               AND signature.dependency      == ?dependency
-            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before
+            | RENAME _id AS id
+            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before, fault_class, service
             | LIMIT 3
         """
         return es_client.esql(
@@ -102,8 +111,21 @@ class Remediator:
 
     @staticmethod
     def _stage1_hybrid(fp: Fingerprint, symptom: str) -> list[dict]:
+        # Same METADATA _id / RENAME fix as _stage0_exact -- see its
+        # comment. RENAME happens after FUSE since _id needs to survive
+        # both FORK branches merging back together first. _score has the
+        # exact same problem as _id: `SORT _score` inside a FORK branch
+        # fails with "Unknown column [_score]" unless it's requested via
+        # METADATA too -- found live, same crash pattern as the _id bug.
+        #
+        # _index is a THIRD metadata column needed here: FUSE's default
+        # row-matching key is `_index`, and without requesting it via
+        # METADATA the command fails outright with "FUSE requires a key
+        # column, default [_index] column not found" -- found live, same
+        # root cause class as the two bugs above (ES|QL only exposes
+        # document metadata columns that were explicitly asked for).
         query = """
-            FROM probe-memory
+            FROM probe-memory METADATA _id, _index, _score
             | WHERE kind == "runbook" AND status != "demoted"
             | FORK
                 ( WHERE MATCH(semantic, ?symptom) | SORT _score DESC | LIMIT 10 )
@@ -114,7 +136,8 @@ class Remediator:
             | FUSE
             | EVAL rank = _score - (failed_reuses * 0.1)
             | SORT rank DESC
-            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score
+            | RENAME _id AS id
+            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score, fault_class, service
             | LIMIT 3
         """
         params = {
@@ -129,6 +152,18 @@ class Remediator:
             # FORK/FUSE unavailable on this ES version -- RRF retriever
             # fallback over the same two queries (tool 2's documented
             # fallback).
+            # A null-valued term filter (e.g. fp.dependency is often
+            # None) is invalid Elasticsearch JSON -- {"term": {"field":
+            # null}} -- found live as an x_content_parse_exception, not
+            # just "matches nothing". Only include a `should` clause
+            # when its value is actually set.
+            should = []
+            if fp.change_point:
+                should.append({"term": {"signature.change_point": fp.change_point}})
+            if fp.loudest_service:
+                should.append({"term": {"signature.loudest_service": fp.loudest_service}})
+            if fp.dependency:
+                should.append({"term": {"signature.dependency": fp.dependency}})
             body = {
                 "retriever": {
                     "rrf": {
@@ -140,11 +175,7 @@ class Remediator:
                                         "bool": {
                                             "filter": [{"term": {"kind": "runbook"}}],
                                             "must_not": [{"term": {"status": "demoted"}}],
-                                            "should": [
-                                                {"term": {"signature.change_point": fp.change_point}},
-                                                {"term": {"signature.loudest_service": fp.loudest_service}},
-                                                {"term": {"signature.dependency": fp.dependency}},
-                                            ],
+                                            "should": should,
                                         }
                                     }
                                 }
@@ -155,7 +186,9 @@ class Remediator:
                 "size": 3,
             }
             result = es_client.search("probe-memory", body)
-            return [hit["_source"] | {"_score": hit["_score"]} for hit in result["hits"]["hits"]]
+            return [
+                {"id": hit["_id"], **hit["_source"], "_score": hit["_score"]} for hit in result["hits"]["hits"]
+            ]
 
     @staticmethod
     def _ruled_out(symptom: str) -> list[RuledOut]:
@@ -191,6 +224,7 @@ class Remediator:
     # -- entry point -----------------------------------------------------
 
     def remediate(self, decision: Decision, fingerprint: Fingerprint, symptom: str) -> RemediatorOutput:
+        es_client.set_stage("remediator")
         if decision.kind != "incident":
             raise ValueError(
                 f"Remediator runs on every incident, never on watch/transient (got kind={decision.kind!r})"
@@ -203,7 +237,14 @@ class Remediator:
         if cache_hit_id is not None:
             runbook = es_client.get_doc("probe-memory", cache_hit_id)
             if runbook is not None and runbook.get("status") != "demoted":
-                candidates = [runbook]
+                # get_doc() returns the raw _source, which has no "id" key
+                # inside it (id is document metadata, not a real field) --
+                # stage0/stage1 both RENAME _id AS id so their candidates
+                # always carry it; inject it here too so matched_runbook["id"]
+                # below doesn't KeyError on a cache hit. Found live: crashed
+                # on the second occurrence of a repeated incident, exactly
+                # the case the cache exists to serve.
+                candidates = [{**runbook, "id": cache_hit_id}]
             # else: falls through to stage 0/1 below, same as a cache miss.
 
         if not candidates:

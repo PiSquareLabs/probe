@@ -47,6 +47,20 @@ ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 # route by dataset.
 TRACES_DATA_STREAM = os.environ.get("TRACES_DATA_STREAM", "traces-generic.otel-default")
 
+# Discovered against a real Elastic Cloud Serverless project: local
+# self-hosted (elastic-start-local) maps the OTel span-kind concept to a
+# field called `span.kind` with values like "SERVER" (OTel semconv
+# casing) -- that's what the already-validated local battery ran
+# against. This specific Serverless project's OTel-native ingestion
+# instead maps it to a field literally called `kind`, with Title-case
+# values ("Server", "Client", "Internal", ...). RUNNING_ON_ELASTIC_CLOUD.md
+# already flags that Cloud/Serverless was never independently
+# re-validated -- this is exactly the kind of schema difference that
+# caveat was warning about. Both overridable so the same file works
+# against either backend without editing code.
+SPAN_KIND_FIELD = os.environ.get("SPAN_KIND_FIELD", "span.kind")
+SPAN_KIND_SERVER_VALUE = os.environ.get("SPAN_KIND_SERVER_VALUE", "SERVER")
+
 DEFAULT_LOOKBACK_MINUTES = 5
 DEFAULT_BUCKET_SECONDS = 2  # spec §8: test 1s/2s/5s, pick smallest with a clean p<0.01
 SIGNIFICANCE_THRESHOLD = 0.01  # spec uses pvalue < 0.01, stricter than causal-changepoint-detection's 0.05
@@ -176,7 +190,7 @@ def _traces_extra_where(index: str) -> str:
     # keeps the old LIKE-equivalent exclusion for now.
     if index != TRACES_DATA_STREAM:
         return ""
-    return 'AND span.kind == "SERVER" AND NOT STARTS_WITH(name, "flagd.evaluation")'
+    return f'AND {SPAN_KIND_FIELD} == "{SPAN_KIND_SERVER_VALUE}" AND NOT STARTS_WITH(name, "flagd.evaluation")'
 
 
 def _build_query(index: str, stat_expr: str, extra_filter: str, service_field: str,
