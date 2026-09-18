@@ -33,7 +33,7 @@ import pipeline_log as plog
 import remediator
 from schemas import Decision
 
-FLAGD_PATH = Path(r"C:\Users\Safar\Desktop\probe\opentelemetry-demo\src\flagd\demo.flagd.json")
+FLAGD_PATH = flagd_control.FLAGD_PATH  # single source of truth, env-overridable via FLAGD_PATH
 POLL_INTERVAL = 12
 MAX_WAIT_SECONDS = 150
 

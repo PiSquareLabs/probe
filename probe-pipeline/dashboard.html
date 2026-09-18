@@ -163,6 +163,27 @@
   .seg-row { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .note { font-size: 11.5px; color: var(--dim-2); line-height: 1.6; }
   .hidden { display: none !important; }
+
+  textarea.input { resize: vertical; min-height: 56px; font-family: inherit; }
+
+  .techtest-step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dim); padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+  .techtest-step:last-child { border-bottom: none; }
+  .techtest-step .step-num { width: 20px; height: 20px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: var(--dim); flex-shrink: 0; }
+  .techtest-step.done { color: var(--text); }
+  .techtest-step.done .step-num { background: var(--good); color: var(--on-good-text); border-color: var(--good); }
+
+  .compare-panel { display: flex; gap: 14px; }
+  .compare-col { flex: 1; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .compare-col .compare-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); margin-bottom: 4px; }
+  .compare-col .compare-value { font-size: 22px; font-weight: 700; }
+  .compare-saved { text-align: center; font-size: 12.5px; color: var(--good); font-weight: 600; margin-top: 4px; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 460px; max-height: 85vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .modal h3 { margin: 0; font-size: 15px; }
+  .modal .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .modal .btn-correct { flex: 1; background: var(--good); border-color: var(--good); color: var(--on-good-text); }
+  .modal .btn-incorrect { flex: 1; background: var(--bad); border-color: var(--bad); color: #fff; }
 </style>
 </head>
 <body>
@@ -316,6 +337,10 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"></path></svg>
           Run
         </button>
+        <button class="tab-btn" data-tab="techtest">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path></svg>
+          Test
+        </button>
       </div>
 
       <div class="tab-body">
@@ -402,8 +427,75 @@
             Only flags confirmed to reach a graded result are listed. Gate's normal persistence checks are bypassed for these so the pipeline's mechanics can be demonstrated reliably -- a testing shortcut, not production behavior. See PROBE-LIVE-TESTING-GUIDE.md &sect;8.
           </div>
         </div>
+
+        <!-- Technical Test tab -->
+        <div id="tab-techtest" class="hidden">
+          <label class="field-label">Flag
+            <select id="techtest-flag-select"></select>
+          </label>
+          <label class="field-label" style="margin-top:14px;">LLM
+            <select id="techtest-llm-select">
+              <option value="">stub (fail-closed, no call)</option>
+              <option value="bedrock">Bedrock</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </label>
+
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-accent" id="techtest-cold-btn" style="padding:9px 14px;display:flex;align-items:center;justify-content:center;gap:7px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#17110b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              1. Clear &amp; run (cold)
+            </button>
+            <button class="btn btn-accent" id="techtest-warm-btn" disabled style="padding:9px 14px;display:flex;align-items:center;justify-content:center;gap:7px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#17110b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"></path></svg>
+              2. Run again (warm)
+            </button>
+            <button class="btn btn-ghost" id="techtest-reset-btn" style="padding:6px 12px;font-size:11.5px;">Reset test state</button>
+          </div>
+          <div class="note mono" id="techtest-status" style="margin-top:8px;"></div>
+
+          <div id="techtest-steps" style="margin-top:6px;"></div>
+
+          <div id="techtest-compare" class="hidden">
+            <div class="field-group-label" style="margin-top:6px;">Token comparison</div>
+            <div class="compare-panel">
+              <div class="compare-col">
+                <div class="compare-label">Cold (reasoned)</div>
+                <div class="compare-value mono" id="techtest-cold-tokens">--</div>
+              </div>
+              <div class="compare-col">
+                <div class="compare-label">Warm (reused)</div>
+                <div class="compare-value mono" id="techtest-warm-tokens">--</div>
+              </div>
+            </div>
+            <div class="compare-saved" id="techtest-saved-pct"></div>
+          </div>
+
+          <div class="note" style="margin-top:14px;">
+            Clear removes only this flag's own runbook + ruled_out docs from probe-memory, then runs it cold. After you give feedback on the diagnosis, run it again -- a real diagnosis found via search should cost far fewer tokens than reasoning it out from scratch. (The Agent Builder tool a "Correct" verdict provisions scopes future telemetry investigation for this service -- it is not what makes run 2 faster; stage-0/cache reuse is.)
+          </div>
+        </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Technical Test feedback popup -->
+<div class="modal-backdrop hidden" id="feedback-modal-backdrop">
+  <div class="modal">
+    <h3>Is this diagnosis right?</h3>
+    <div class="note mono" id="feedback-modal-subtitle"></div>
+    <label class="field-label">Root cause
+      <textarea class="input" id="feedback-root-cause" rows="3"></textarea>
+    </label>
+    <label class="field-label">Steps (one per line)
+      <textarea class="input" id="feedback-steps" rows="4"></textarea>
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-incorrect" id="feedback-incorrect-btn">&#10007; Incorrect</button>
+      <button class="btn btn-correct" id="feedback-correct-btn">&#10003; Correct</button>
+    </div>
+    <div class="note mono" id="feedback-status"></div>
   </div>
 </div>
 
@@ -449,6 +541,7 @@ async function fetchEvents() {
       `${allEvents.length} events · updated ${new Date().toLocaleTimeString()}`;
     dotEl.style.background = "var(--good)";
     render();
+    renderTechtest();
   } catch (e) {
     statusEl.textContent = "fetch failed";
     dotEl.style.background = "var(--bad)";
@@ -635,9 +728,11 @@ function stepDetail(e) {
     const timings = ["stage0_ms", "stage1_ms", "stage2_ms"].filter(k => e[k] !== undefined)
       .map(k => `${k.replace("_ms", "")}=${Math.round(e[k])}ms`).join("  ");
     if (timings) row("real ES|QL/LLM timings", timings);
+    if (typeof e.tokens === "number") row("tokens", e.tokens);
   } else if (e.stage === "correlator") {
     row("diagnosis", `${e.fault_class}/${e.service}`);
     row("confidence", e.confidence);
+    if (typeof e.tokens === "number") row("tokens", e.tokens);
   } else if (e.stage === "grader") {
     row("correct in top 3", e.correct_at3);
     if (!e.correct_at1) row("truth was", `${e.truth_fault_class}/${e.truth_service}`);
@@ -716,7 +811,7 @@ for (const btn of document.querySelectorAll(".tab-btn")) {
   btn.addEventListener("click", () => {
     for (const b of document.querySelectorAll(".tab-btn")) b.classList.remove("active");
     btn.classList.add("active");
-    for (const panel of ["settings", "flags", "run"]) {
+    for (const panel of ["settings", "flags", "run", "techtest"]) {
       document.getElementById("tab-" + panel).classList.toggle("hidden", panel !== btn.dataset.tab);
     }
   });
@@ -797,8 +892,11 @@ function renderFlags(flags) {
   const grid = document.getElementById("flag-buttons");
   grid.innerHTML = "";
   const select = document.getElementById("run-flag-select");
+  const techtestSelect = document.getElementById("techtest-flag-select");
   const prevSelected = select.value;
+  const prevTechtestSelected = techtestSelect.value;
   select.innerHTML = "";
+  techtestSelect.innerHTML = "";
   let onCount = 0;
   for (const [name, info] of Object.entries(flags)) {
     if (info.is_on) onCount++;
@@ -815,13 +913,20 @@ function renderFlags(flags) {
     btn.addEventListener("click", () => toggleFlag(name, info));
     grid.appendChild(btn);
 
+    const label = name + (info.target_service ? ` (${info.target_service})` : " (no target)");
     const opt = document.createElement("option");
     opt.value = name;
-    opt.textContent = name + (info.target_service ? ` (${info.target_service})` : " (no target)");
+    opt.textContent = label;
     select.appendChild(opt);
+
+    const opt2 = document.createElement("option");
+    opt2.value = name;
+    opt2.textContent = label;
+    techtestSelect.appendChild(opt2);
   }
   document.getElementById("flags-status").textContent = `${onCount} active`;
   if ([...select.options].some(o => o.value === prevSelected)) select.value = prevSelected;
+  if ([...techtestSelect.options].some(o => o.value === prevTechtestSelected)) techtestSelect.value = prevTechtestSelected;
 }
 
 async function toggleFlag(name, info) {
@@ -914,6 +1019,229 @@ document.getElementById("theme-toggle-btn").addEventListener("click", () => {
   applyTheme(next);
   try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* private window / storage blocked -- theme just won't persist */ }
 });
+
+// -- Technical Test tab: clear -> run cold -> dev feedback -> run warm ->
+// compare tokens. Reuses /api/run exactly as the Run tab does; only the
+// clear + feedback steps are new endpoints. Diagnosis text (root_cause/
+// steps) and incident_id/symptom needed for the feedback popup come
+// straight off the already-polled pipeline_events.jsonl (watch_pipeline.py
+// now logs them on the correlator "diagnosis" / remediator
+// "memory_hit_diagnosis" events) -- no extra fetch.
+
+let techtestRunId = null;      // the run currently being tracked (cold or warm)
+let techtestColdRunId = null;
+let techtestWarmRunId = null;
+let techtestFeedbackGiven = new Set();  // run_ids the popup has already been shown+resolved for
+let techtestPendingDiagnosis = null;    // the diagnosis event backing the currently-open popup
+
+function techtestSetSteps(steps) {
+  const el = document.getElementById("techtest-steps");
+  el.innerHTML = steps.map((s, i) => `
+    <div class="techtest-step${s.done ? " done" : ""}">
+      <span class="step-num">${s.done ? "&#10003;" : i + 1}</span>
+      <span>${s.label}</span>
+    </div>`).join("");
+}
+
+function techtestEnvPayload() {
+  return envPayload();  // same Settings-tab-derived ES/LLM credentials the Run tab sends
+}
+
+function techtestTokensForRun(runId) {
+  return allEvents
+    .filter(e => e.run_id === runId && (e.stage === "remediator" || e.stage === "correlator") && typeof e.tokens === "number")
+    .reduce((sum, e) => sum + e.tokens, 0);
+}
+
+function techtestUpdateCompare() {
+  if (!techtestColdRunId || !techtestWarmRunId) return;
+  const coldTokens = techtestTokensForRun(techtestColdRunId);
+  const warmTokens = techtestTokensForRun(techtestWarmRunId);
+  const hasWarmDiagnosis = allEvents.some(e => e.run_id === techtestWarmRunId && (e.event === "memory_hit" || e.event === "memory_hit_diagnosis" || e.event === "memory_miss"));
+  if (!hasWarmDiagnosis) return;
+
+  document.getElementById("techtest-compare").classList.remove("hidden");
+  document.getElementById("techtest-cold-tokens").textContent = coldTokens;
+  document.getElementById("techtest-warm-tokens").textContent = warmTokens;
+  const savedEl = document.getElementById("techtest-saved-pct");
+  if (coldTokens > 0) {
+    const pct = Math.round(((coldTokens - warmTokens) / coldTokens) * 100);
+    savedEl.textContent = `${pct}% fewer tokens on the warm run (stage-0/cache reuse skipped the Correlator)`;
+  } else {
+    savedEl.textContent = "";
+  }
+}
+
+function techtestFindDiagnosisEvent(runId) {
+  return allEvents.find(e => e.run_id === runId && (e.event === "diagnosis" || e.event === "memory_hit_diagnosis"));
+}
+
+function techtestShowFeedbackModal(diagEvent) {
+  techtestPendingDiagnosis = diagEvent;
+  document.getElementById("feedback-modal-subtitle").textContent =
+    `${diagEvent.fault_class}/${diagEvent.service} -- run ${diagEvent.run_id} (${diagEvent.stage === "correlator" ? "reasoned cold" : "found via search"})`;
+  document.getElementById("feedback-root-cause").value = diagEvent.root_cause || "";
+  document.getElementById("feedback-steps").value = (diagEvent.steps || []).join("\n");
+  document.getElementById("feedback-status").textContent = "";
+  document.getElementById("feedback-modal-backdrop").classList.remove("hidden");
+}
+
+function techtestCloseFeedbackModal() {
+  document.getElementById("feedback-modal-backdrop").classList.add("hidden");
+  techtestPendingDiagnosis = null;
+}
+
+function renderTechtest() {
+  if (!techtestRunId) return;
+
+  // Step tracker for whichever run is active.
+  const isCold = techtestRunId === techtestColdRunId;
+  const runEvents = allEvents.filter(e => e.run_id === techtestRunId);
+  const hasDetector = runEvents.some(e => e.stage === "detector");
+  const hasRemediator = runEvents.some(e => e.stage === "remediator");
+  const diagEvent = techtestFindDiagnosisEvent(techtestRunId);
+  const hasWriter = runEvents.some(e => e.stage === "writer");
+
+  techtestSetSteps([
+    { label: isCold ? "Cleared probe-memory" : "Reused prior probe-memory state", done: true },
+    { label: "Detector scanned", done: hasDetector },
+    { label: "Remediator searched", done: hasRemediator },
+    { label: diagEvent ? (diagEvent.stage === "correlator" ? "Correlator reasoned (cold)" : "Found via search (warm)") : "Diagnosis pending...", done: !!diagEvent },
+    { label: "Writer persisted", done: hasWriter },
+  ]);
+
+  document.getElementById("techtest-status").textContent = diagEvent
+    ? `run ${techtestRunId}: ${diagEvent.fault_class}/${diagEvent.service}${hasWriter ? " -- graded & written" : ""}`
+    : `run ${techtestRunId}: watching for an incident... (up to 2 min)`;
+
+  // Show the feedback popup once, the first time this run gets a diagnosis.
+  if (diagEvent && !techtestFeedbackGiven.has(techtestRunId) && document.getElementById("feedback-modal-backdrop").classList.contains("hidden")) {
+    techtestShowFeedbackModal(diagEvent);
+  }
+
+  if (isCold && diagEvent) {
+    document.getElementById("techtest-warm-btn").disabled = !techtestFeedbackGiven.has(techtestRunId);
+  }
+
+  techtestUpdateCompare();
+}
+
+document.getElementById("techtest-cold-btn").addEventListener("click", async () => {
+  const status = document.getElementById("techtest-status");
+  const flag = document.getElementById("techtest-flag-select").value;
+  const llm = document.getElementById("techtest-llm-select").value || null;
+  if (!flag) { status.textContent = "pick a flag first"; return; }
+
+  document.getElementById("techtest-cold-btn").disabled = true;
+  document.getElementById("techtest-compare").classList.add("hidden");
+  status.textContent = `clearing ${flag}'s prior test state...`;
+  try {
+    const clearResp = await fetch("/api/techtest/clear", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flag, ...techtestEnvPayload() }),
+    });
+    const clearBody = await clearResp.json();
+    if (!clearResp.ok || clearBody.cleared === false) throw new Error(clearBody.error || "clear failed");
+
+    status.textContent = `cleared (runbook existed: ${clearBody.runbook_existed}, ruled_out removed: ${clearBody.ruled_out_deleted}) -- launching cold run...`;
+    const runResp = await fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flag, llm, ...techtestEnvPayload() }),
+    });
+    const runBody = await runResp.json();
+    if (!runResp.ok) throw new Error(runBody.error || ("HTTP " + runResp.status));
+
+    techtestColdRunId = runBody.run_id;
+    techtestWarmRunId = null;
+    techtestRunId = runBody.run_id;
+    status.textContent = `cold run started (run_id=${runBody.run_id}) -- watching...`;
+  } catch (e) {
+    status.textContent = "failed: " + e.message;
+  } finally {
+    document.getElementById("techtest-cold-btn").disabled = false;
+  }
+});
+
+document.getElementById("techtest-warm-btn").addEventListener("click", async () => {
+  const status = document.getElementById("techtest-status");
+  const flag = document.getElementById("techtest-flag-select").value;
+  const llm = document.getElementById("techtest-llm-select").value || null;
+
+  document.getElementById("techtest-warm-btn").disabled = true;
+  status.textContent = `launching warm run (no clear this time)...`;
+  try {
+    const runResp = await fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flag, llm, ...techtestEnvPayload() }),
+    });
+    const runBody = await runResp.json();
+    if (!runResp.ok) throw new Error(runBody.error || ("HTTP " + runResp.status));
+
+    techtestWarmRunId = runBody.run_id;
+    techtestRunId = runBody.run_id;
+    status.textContent = `warm run started (run_id=${runBody.run_id}) -- watching...`;
+  } catch (e) {
+    status.textContent = "failed: " + e.message;
+    document.getElementById("techtest-warm-btn").disabled = false;
+  }
+});
+
+document.getElementById("techtest-reset-btn").addEventListener("click", () => {
+  techtestRunId = null;
+  techtestColdRunId = null;
+  techtestWarmRunId = null;
+  techtestFeedbackGiven = new Set();
+  techtestCloseFeedbackModal();
+  document.getElementById("techtest-status").textContent = "";
+  document.getElementById("techtest-steps").innerHTML = "";
+  document.getElementById("techtest-compare").classList.add("hidden");
+  document.getElementById("techtest-warm-btn").disabled = true;
+});
+
+async function techtestSubmitFeedback(verdict) {
+  const diag = techtestPendingDiagnosis;
+  if (!diag) return;
+  const statusEl = document.getElementById("feedback-status");
+  statusEl.textContent = "saving...";
+  document.getElementById("feedback-correct-btn").disabled = true;
+  document.getElementById("feedback-incorrect-btn").disabled = true;
+  try {
+    const payload = { verdict, ...techtestEnvPayload() };
+    if (verdict === "correct") {
+      payload.runbook_id = `${diag.fault_class}__${diag.service}`;
+      const rootCause = document.getElementById("feedback-root-cause").value.trim();
+      const steps = document.getElementById("feedback-steps").value.split("\n").map(s => s.trim()).filter(Boolean);
+      if (rootCause && rootCause !== (diag.root_cause || "")) payload.root_cause = rootCause;
+      if (steps.length && JSON.stringify(steps) !== JSON.stringify(diag.steps || [])) payload.steps = steps;
+    } else {
+      payload.fault_class = diag.fault_class;
+      payload.service = diag.service;
+      payload.incident_id = diag.incident_id;
+      payload.symptom = diag.symptom;
+    }
+    const resp = await fetch("/api/techtest/feedback", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await resp.json();
+    if (!resp.ok || body.ok === false) throw new Error(body.error || "feedback failed");
+
+    techtestFeedbackGiven.add(diag.run_id);
+    techtestCloseFeedbackModal();
+    if (diag.run_id === techtestColdRunId) {
+      document.getElementById("techtest-warm-btn").disabled = false;
+      document.getElementById("techtest-status").textContent = `feedback saved (${verdict}) -- ready for the warm run`;
+    }
+  } catch (e) {
+    statusEl.textContent = "failed: " + e.message;
+  } finally {
+    document.getElementById("feedback-correct-btn").disabled = false;
+    document.getElementById("feedback-incorrect-btn").disabled = false;
+  }
+}
+
+document.getElementById("feedback-correct-btn").addEventListener("click", () => techtestSubmitFeedback("correct"));
+document.getElementById("feedback-incorrect-btn").addEventListener("click", () => techtestSubmitFeedback("incorrect"));
 
 loadTheme();
 loadEnvFromStorage();

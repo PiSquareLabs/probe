@@ -121,6 +121,7 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
     print(f"  trigger: {[(c.service, c.signal, c.type) for c in decision.trigger]}")
     print(f"{'=' * 70}")
 
+    incident_id = f"watch_{int(time.time())}"
     trigger = decision.trigger[0]
     if enrich_search:
         fingerprint, symptom = enrich_fingerprint_and_symptom(trigger, raw, correlator_instance)
@@ -141,6 +142,7 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         print(f"  ruled_out: {[(r.proposed_fault_class, r.proposed_service) for r in rem_out.ruled_out]}")
     plog.emit("remediator", rem_out.path, candidates_found=len(rem_out.candidates),
                confirm_match=rem_out.confirm.get("match"), confirm_confidence=rem_out.confirm.get("confidence"),
+               tokens=rem_out.tokens,
                **{f"{k}_ms": v for k, v in rem_out.timings_ms.items()})
 
     if rem_out.path == "memory_miss":
@@ -152,7 +154,9 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         print(f"  root_cause: {diagnosis.root_cause}")
         print(f"  steps: {diagnosis.steps}")
         plog.emit("correlator", "diagnosis", fault_class=diagnosis.top1.fault_class,
-                   service=diagnosis.top1.service, confidence=diagnosis.top1.confidence)
+                   service=diagnosis.top1.service, confidence=diagnosis.top1.confidence, tokens=diagnosis.tokens,
+                   root_cause=diagnosis.root_cause, steps=diagnosis.steps,
+                   incident_id=incident_id, symptom=symptom)
     else:
         rb = rem_out.runbook
         from schemas import Diagnosis, DiagnosisCandidate
@@ -162,7 +166,9 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         )
         print(f"\nMemory hit -- runbook is the diagnosis:")
         print(f"  {rb['fault_class']}/{rb['service']}: {rb.get('root_cause')}")
-        plog.emit("remediator", "memory_hit_diagnosis", fault_class=rb["fault_class"], service=rb["service"])
+        plog.emit("remediator", "memory_hit_diagnosis", fault_class=rb["fault_class"], service=rb["service"],
+                   root_cause=rb.get("root_cause", ""), steps=rb.get("steps", []),
+                   incident_id=incident_id, symptom=symptom)
 
     if truth_flag:
         truth = catalog_runbook.read_by_flag(truth_flag)
@@ -176,7 +182,7 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
                    abstained=probe_run.abstained, truth_fault_class=truth.fault_class, truth_service=truth.service)
 
         w = writer.Writer(remediator_instance)
-        write_result = w.write(probe_run, diagnosis, fingerprint, incident_id=f"watch_{int(time.time())}", symptom=symptom)
+        write_result = w.write(probe_run, diagnosis, fingerprint, incident_id=incident_id, symptom=symptom)
         print(f"Writer: {write_result}")
         plog.emit("writer", write_result.get("action", "wrote") if isinstance(write_result, dict) else "wrote",
                    **(write_result if isinstance(write_result, dict) else {}))

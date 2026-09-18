@@ -198,6 +198,27 @@ def update_doc(index: str, doc_id: str, partial: dict) -> None:
         raise EsqlError(f"POST {index}/_update/{doc_id} failed ({e.code}): {e.read().decode()}") from e
 
 
+def delete_doc(index: str, doc_id: str) -> None:
+    """DELETE by id. Deliberately not used by writer.py (its own
+    docstring: "Never: ... deletes a runbook") -- this exists for
+    test/dev tooling (techtest_clear.py) that needs to reset a scoped
+    (fault_class, service) key between runs, not for the graded write
+    path. A 404 (nothing to delete) is not an error here.
+    """
+    req = urllib.request.Request(
+        f"{ES_URL}/{index}/_doc/{doc_id}",
+        headers={"Authorization": _auth_header()},
+        method="DELETE",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            resp.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return
+        raise EsqlError(f"DELETE {index}/_doc/{doc_id} failed ({e.code}): {e.read().decode()}") from e
+
+
 def search(index: str, body: dict) -> dict:
     """Raw `_search` call -- used for the stage-1 RRF fallback when
     FORK/FUSE isn't available on the target Elasticsearch version

@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "uvicorn", "compare_server:app", "--app-dir", "probe-pipeline", "--port", "8010"],
       "port": 8010
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["probe-pipeline/serve_dashboard.py", "8765"],
+      "port": 8765
     }
   ]
 }

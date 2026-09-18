@@ -39,15 +39,30 @@ API:
     POST /api/flags/<name>   {"variant": "on"} -> sets it, returns the new read_flags() snapshot
     POST /api/flags/reset    -> turns every known flag off (all of them, not just WORKING_FLAGS,
                                  as a safety net against a flag left on from before this UI existed)
-    POST /api/run            {"flag": "...", "llm": null,
-                               "es_url": "...", "es_api_key": "...",
-                               "aws_bearer_token_bedrock": "...", "aws_region": "...",
-                               "bedrock_model_id": "...", "openai_api_key": "..."}
-                              -> launches run_working_fault.py --flag <flag> as a background
-                                 subprocess with those as env vars, returns
-                                 {"started": true, "run_id": "..."} immediately
-                                 (non-blocking -- watch it happen via pipeline_events.jsonl,
-                                 which the dashboard already polls every 3s)
+    POST /api/run             {"flag": "...", "llm": null,
+                                "es_url": "...", "es_api_key": "...",
+                                "aws_bearer_token_bedrock": "...", "aws_region": "...",
+                                "bedrock_model_id": "...", "openai_api_key": "..."}
+                               -> launches run_working_fault.py --flag <flag> as a background
+                                  subprocess with those as env vars, returns
+                                  {"started": true, "run_id": "..."} immediately
+                                  (non-blocking -- watch it happen via pipeline_events.jsonl,
+                                  which the dashboard already polls every 3s)
+    POST /api/techtest/clear    {"flag": "...", ...same env fields as /api/run}
+                                 -> synchronously runs techtest_clear.py, which resolves the
+                                    flag's (fault_class, service) and deletes that runbook +
+                                    its ruled_out docs from probe-memory (scoped, not a full
+                                    wipe), relays its JSON result
+    POST /api/techtest/feedback {"verdict": "correct"|"incorrect",
+                                  "runbook_id": "...", "root_cause": "...", "steps": [...],
+                                  "fault_class": "...", "service": "...",
+                                  "incident_id": "...", "symptom": "...",
+                                  ...same env fields as /api/run}
+                                 -> synchronously runs techtest_feedback.py: "correct" calls
+                                    Writer.mark_dev_verified (optionally with an edited
+                                    root_cause/steps), which also provisions this service's
+                                    Agent Builder candidate-query tool; "incorrect" calls
+                                    Writer.mark_jira_rejected. Relays its JSON result.
 """
 from __future__ import annotations
 
@@ -82,6 +97,38 @@ _ENV_FIELDS = {
 def _working_flags() -> dict:
     all_flags = flagd_control.read_flags()
     return {name: info for name, info in all_flags.items() if name in WORKING_FLAGS}
+
+
+def _build_env(body: dict) -> dict:
+    """Same whitelisted-fields-only env-building /api/run always did,
+    factored out so /api/techtest/clear and /api/techtest/feedback share
+    it: ES_URL/ES_API_KEY typed into the dashboard's Settings tab must
+    reach the subprocess this way, never via a direct es_client import in
+    this long-running server process (es_client.ES_URL is a module-level
+    constant read once at import time -- mutating os.environ afterward
+    here would silently do nothing).
+    """
+    env = dict(os.environ)
+    for body_key, env_name in _ENV_FIELDS.items():
+        if body.get(body_key):
+            env[env_name] = body[body_key]
+    return env
+
+
+def _run_sync(script_args: list[str], env: dict) -> dict:
+    """Runs a quick (single/few doc) helper script to completion and
+    relays its JSON stdout -- unlike /api/run's fire-and-forget Popen
+    (a 2-minute watch loop), techtest_clear.py/techtest_feedback.py are
+    a handful of ES calls and can just be waited on synchronously.
+    """
+    result = subprocess.run(
+        [sys.executable, *script_args], cwd=str(HERE), env=env,
+        capture_output=True, text=True, timeout=30,
+    )
+    try:
+        return json.loads(result.stdout.strip().splitlines()[-1])
+    except (json.JSONDecodeError, IndexError):
+        return {"ok": False, "error": (result.stderr or result.stdout or "no output").strip()[-2000:]}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -158,11 +205,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     raise ValueError(f"{flag!r} is not in WORKING_FLAGS -- not exposed by this UI")
 
                 run_id = uuid.uuid4().hex[:8]
-                env = dict(os.environ)
+                env = _build_env(body)
                 env["PIPELINE_RUN_ID"] = run_id
-                for body_key, env_name in _ENV_FIELDS.items():
-                    if body.get(body_key):
-                        env[env_name] = body[body_key]
 
                 cmd = [sys.executable, "run_working_fault.py", "--flag", flag]
                 llm = body.get("llm")
@@ -179,6 +223,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                   stdout=open(HERE / f"run_{run_id}.log", "w"),
                                   stderr=subprocess.STDOUT)
                 self._json(200, {"started": True, "run_id": run_id, "flag": flag})
+            except Exception as e:
+                self._json(400, {"error": str(e)})
+            return
+
+        if path == "/api/techtest/clear":
+            try:
+                body = self._read_json_body()
+                flag = body.get("flag")
+                if flag not in WORKING_FLAGS:
+                    raise ValueError(f"{flag!r} is not in WORKING_FLAGS -- not exposed by this UI")
+                self._json(200, _run_sync(["techtest_clear.py", "--flag", flag], _build_env(body)))
+            except Exception as e:
+                self._json(400, {"error": str(e)})
+            return
+
+        if path == "/api/techtest/feedback":
+            try:
+                body = self._read_json_body()
+                verdict = body.get("verdict")
+                if verdict not in ("correct", "incorrect"):
+                    raise ValueError(f"verdict must be 'correct' or 'incorrect', got {verdict!r}")
+
+                cmd = ["techtest_feedback.py", "--verdict", verdict]
+                if verdict == "correct":
+                    if not body.get("runbook_id"):
+                        raise ValueError("verdict 'correct' requires runbook_id")
+                    cmd += ["--runbook-id", body["runbook_id"]]
+                    if body.get("root_cause"):
+                        cmd += ["--root-cause", body["root_cause"]]
+                    if body.get("steps") is not None:
+                        cmd += ["--steps-json", json.dumps(body["steps"])]
+                else:
+                    for field in ("fault_class", "service", "incident_id", "symptom"):
+                        if not body.get(field):
+                            raise ValueError(f"verdict 'incorrect' requires {field}")
+                        cmd += [f"--{field.replace('_', '-')}", body[field]]
+
+                self._json(200, _run_sync(cmd, _build_env(body)))
             except Exception as e:
                 self._json(400, {"error": str(e)})
             return

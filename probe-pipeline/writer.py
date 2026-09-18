@@ -188,28 +188,57 @@ class Writer:
         es_client.update_doc("probe-memory", runbook_id, {"verified_by": verified_by})
         self._remediator.invalidate(runbook_id)
 
-    def mark_jira_fixed(self, runbook_id: str) -> dict:
+    def _verify_and_provision(
+        self, runbook_id: str, verified_by_tag: str, edited_root_cause: str | None = None, edited_steps: list[str] | None = None
+    ) -> dict:
+        """Shared by mark_jira_fixed and mark_dev_verified: append
+        `verified_by_tag`, flip status to "verified", optionally apply a
+        human edit to root_cause/steps (this is the ONE place those
+        fields are allowed to change on an already-verified runbook --
+        _upsert_runbook refuses to, by design), then provision/refresh
+        this service's Agent Builder candidate-query tool from whatever
+        the runbook now says.
+        """
         existing = es_client.get_doc("probe-memory", runbook_id)
         verified_by = list(existing.get("verified_by", [])) if existing else []
-        if "human" not in verified_by:
-            verified_by.append("human")
-        es_client.update_doc("probe-memory", runbook_id, {"verified_by": verified_by, "status": "verified"})
+        if verified_by_tag not in verified_by:
+            verified_by.append(verified_by_tag)
+
+        patch = {"verified_by": verified_by, "status": "verified"}
+        if edited_root_cause is not None:
+            patch["root_cause"] = edited_root_cause
+        if edited_steps is not None:
+            patch["steps"] = edited_steps
+        es_client.update_doc("probe-memory", runbook_id, patch)
         self._remediator.invalidate(runbook_id)
 
-        # A human closing the ticket Fixed is the one signal this runbook's
-        # diagnosis was actually checked, not just self-confirmed by the
-        # confirm agent -- worth a one-time write to give this service its
-        # own Agent Builder candidate-query tool (agent_builder.py).
+        # A human verifying the runbook is the one signal its diagnosis was
+        # actually checked, not just self-confirmed by the confirm agent --
+        # worth a one-time write to give this service its own Agent Builder
+        # candidate-query tool (agent_builder.py).
         if existing is None:
             return {"verified": True, "tool": {"provisioned": False, "reason": "no runbook doc to read fault_class/service from"}}
         tool_result = agent_builder.upsert_candidate_query_tool(
             fault_class=existing.get("fault_class"),
             service=existing.get("service"),
-            root_cause=existing.get("root_cause", ""),
-            steps=existing.get("steps", []),
+            root_cause=edited_root_cause if edited_root_cause is not None else existing.get("root_cause", ""),
+            steps=edited_steps if edited_steps is not None else existing.get("steps", []),
             signature=existing.get("signature", {}),
         )
         return {"verified": True, "tool": tool_result}
+
+    def mark_jira_fixed(self, runbook_id: str) -> dict:
+        return self._verify_and_provision(runbook_id, verified_by_tag="human")
+
+    def mark_dev_verified(self, runbook_id: str, edited_root_cause: str | None = None, edited_steps: list[str] | None = None) -> dict:
+        """The dashboard's "Correct" feedback button: same verification +
+        Agent Builder provisioning as a Jira Fixed confirmation, except
+        the signal is a developer clicking Correct in the Technical Test
+        tab instead of closing a ticket, and the dev may optionally tighten
+        root_cause/steps to more closely match the actual signal at the
+        same time (see _verify_and_provision's edited_* params).
+        """
+        return self._verify_and_provision(runbook_id, verified_by_tag="human", edited_root_cause=edited_root_cause, edited_steps=edited_steps)
 
     def mark_jira_rejected(self, fault_class: str, service: str, incident_id: str, symptom: str) -> None:
         self._write_ruled_out(fault_class, service, incident_id, symptom, verified_by="human")

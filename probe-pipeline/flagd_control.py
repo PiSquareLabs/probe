@@ -8,9 +8,13 @@ pipeline_validation_run.py) kept its own independent copy.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
-FLAGD_PATH = Path(r"C:\Users\Safar\Desktop\probe\opentelemetry-demo\src\flagd\demo.flagd.json")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+# Repo-relative default (this checkout's own opentelemetry-demo), overridable
+# via FLAGD_PATH for a machine where that demo stack lives somewhere else.
+FLAGD_PATH = Path(os.environ.get("FLAGD_PATH", str(REPO_ROOT / "opentelemetry-demo" / "src" / "flagd" / "demo.flagd.json")))
 
 # flag -> (on-variant, target service or None -- kafkaQueueProblems has no
 # direct trace/metric target, see DETECTORS.md)
