@@ -131,9 +131,13 @@ class Correlator:
         """
         if cp_time is None:
             return None, []
+        # Same field/value fix as change_point.py -- see es_client.py's
+        # SPAN_KIND_FIELD comment. This query's own hardcoded
+        # span.kind == "CLIENT" had the identical bug, undiscovered
+        # until this function got reused for pre-search enrichment.
         query = f"""
             FROM {TRACES_DATA_STREAM}
-            | WHERE service.name == ?loudest AND span.kind == "CLIENT"
+            | WHERE service.name == ?loudest AND {es_client.SPAN_KIND_FIELD} == "{es_client.SPAN_KIND_CLIENT_VALUE}"
               AND @timestamp > ?cp_time - 5 minutes
             | EVAL phase = CASE(@timestamp >= ?cp_time, "after", "before")
             | STATS p95 = PERCENTILE(duration, 95) BY phase, db.system, peer.service, span.name
@@ -154,7 +158,7 @@ class Correlator:
         deepest_span = {
             "name": top.get("span.name"),
             "service": loudest_service,
-            "kind": "CLIENT",
+            "kind": es_client.SPAN_KIND_CLIENT_VALUE,
             "dependency": top.get("peer.service") or top.get("db.system"),
         }
         correlated = [f"db.system={r.get('db.system')}", f"span.name={r.get('span.name')}"] if rows else []
