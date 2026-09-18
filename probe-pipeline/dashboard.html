@@ -85,6 +85,40 @@
   .flag-btn.is-on { border-color: var(--error); background: color-mix(in srgb, var(--error) 15%, var(--panel)); }
   .run-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #run-status { font-size: 12px; color: var(--dim); }
+
+  .steps { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
+  .step {
+    display: grid; grid-template-columns: 90px 24px 1fr; gap: 10px;
+    padding: 10px 0; position: relative;
+  }
+  .step .step-time { color: var(--dim); font-size: 12px; padding-top: 2px; }
+  .step .step-dot {
+    width: 14px; height: 14px; border-radius: 50%; margin-top: 3px;
+    border: 2px solid var(--bg); box-shadow: 0 0 0 2px var(--border);
+  }
+  .step:not(:last-child)::before {
+    content: ""; position: absolute; left: 96px; top: 26px; bottom: -10px;
+    width: 2px; background: var(--border);
+  }
+  .step .step-dot.detector { background: var(--detector); }
+  .step .step-dot.gate { background: var(--gate); }
+  .step .step-dot.remediator { background: var(--remediator); }
+  .step .step-dot.correlator { background: var(--correlator); }
+  .step .step-dot.grader { background: var(--grader); }
+  .step-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  }
+  .step-card .step-title { font-weight: 600; margin-bottom: 4px; }
+  .step-card .step-title .stage-label { text-transform: capitalize; color: var(--dim); font-weight: 500; }
+  .step-card .step-detail { font-size: 13px; }
+  .step-card .step-detail div { margin: 2px 0; }
+  .step-card .k { color: var(--dim); }
+  .verdict { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .verdict.correct { background: #66bb6a; color: #0f1115; }
+  .verdict.wrong { background: var(--error); color: #fff; }
+  .verdict.abstained { background: var(--dim); color: #0f1115; }
+  .no-steps { color: var(--dim); padding: 20px; text-align: center; }
+  #raw-log-panel summary { cursor: pointer; color: var(--dim); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -134,11 +168,10 @@
   </details>
 
   <details class="panel" id="run-panel" open>
-    <summary>Run pipeline validation</summary>
+    <summary>Run a confirmed-working fault injection</summary>
     <div class="panel-body">
       <div class="run-row">
         <label>Flag: <select id="run-flag-select"></select></label>
-        <label><input type="checkbox" id="run-gate-off" checked> force incident if Gate doesn't open one (GATE_OFF)</label>
         <label>LLM: <select id="run-llm-select">
           <option value="">stub (fail-closed, no call)</option>
           <option value="bedrock">Bedrock</option>
@@ -147,25 +180,37 @@
         <button id="run-btn">Run</button>
         <span id="run-status"></span>
       </div>
+      <div class="env-note">
+        Only flags confirmed to reach a graded result on this stack are listed here (see
+        run_working_fault.py's WORKING_FAULTS) -- Gate's normal persistence checks are bypassed for
+        these so the pipeline's mechanics can be demonstrated reliably; that's a testing shortcut,
+        not how a production deployment behaves. See PROBE-LIVE-TESTING-GUIDE.md section 8.
+      </div>
     </div>
   </details>
 
   <div class="controls">
-    <label>Run: <select id="run-filter"><option value="">all runs</option></select></label>
+    <label>Run: <select id="run-filter"><option value="">most recent run</option></select></label>
     <button id="refresh-btn">Refresh now</button>
     <label><input type="checkbox" id="auto-refresh" checked> auto-refresh every 3s</label>
     <span id="status"></span>
   </div>
 
-  <div class="stages" id="stage-cards"></div>
-
-  <div id="table-wrap">
-    <table>
-      <thead><tr><th>time</th><th>run</th><th>stage</th><th>event</th><th>fields</th></tr></thead>
-      <tbody id="event-rows"></tbody>
-    </table>
-    <div id="empty" style="display:none">No events yet. Run a pipeline script that imports pipeline_log (e.g. pipeline_validation_run.py) and this will populate live.</div>
+  <div id="steps-wrap">
+    <div class="steps" id="run-steps"></div>
+    <div id="no-steps" class="no-steps" style="display:none">No steps yet for this run.</div>
   </div>
+
+  <details id="raw-log-panel">
+    <summary>Raw event log (all stages, all runs)</summary>
+    <div id="table-wrap" style="margin-top:8px">
+      <table>
+        <thead><tr><th>time</th><th>run</th><th>stage</th><th>event</th><th>fields</th></tr></thead>
+        <tbody id="event-rows"></tbody>
+      </table>
+      <div id="empty" style="display:none">No events yet. Run a pipeline script that imports pipeline_log (e.g. run_working_fault.py) and this will populate live.</div>
+    </div>
+  </details>
 
 <script>
 const LOG_PATH = "pipeline_events.jsonl";
@@ -203,36 +248,21 @@ function render() {
     }
   }
 
-  const events = selectedRun ? allEvents.filter(e => e.run_id === selectedRun) : allEvents;
+  // "most recent run" (no explicit selection) means exactly that -- the
+  // run with the latest timestamp, not literally every run's events
+  // interleaved, which reads as noise once more than one run exists.
+  const effectiveRun = selectedRun || (allEvents.length
+    ? [...allEvents].sort((a, b) => b.ts - a.ts)[0].run_id : null);
+  const events = effectiveRun ? allEvents.filter(e => e.run_id === effectiveRun) : [];
 
-  // per-stage summary cards: last event + count, for the selected run
-  // (or across all runs if none selected)
-  const byStage = {};
-  for (const e of events) {
-    if (!byStage[e.stage]) byStage[e.stage] = { count: 0, last: null };
-    byStage[e.stage].count++;
-    if (!byStage[e.stage].last || e.ts > byStage[e.stage].last.ts) byStage[e.stage].last = e;
-  }
-  const cardsEl = document.getElementById("stage-cards");
-  cardsEl.innerHTML = "";
-  const stageOrder = ["harness", "detector", "gate", "remediator", "correlator", "grader", "writer"];
-  const stages = [...new Set([...stageOrder, ...Object.keys(byStage)])].filter(s => byStage[s]);
-  for (const stage of stages) {
-    const info = byStage[stage];
-    const div = document.createElement("div");
-    div.className = "stage-card " + stage;
-    const fieldsPreview = fieldsToText(info.last);
-    div.innerHTML = `<span class="count">${info.count}</span>
-      <div class="name">${stage}</div>
-      <div class="last-event"><b>${info.last.event}</b><br>${fieldsPreview}</div>`;
-    cardsEl.appendChild(div);
-  }
+  renderSteps(events);
 
-  // event table, newest first
+  // raw event table (all runs, all stages -- the full unfiltered record,
+  // collapsed under <details> since renderSteps() above is the primary view)
   const rowsEl = document.getElementById("event-rows");
   const emptyEl = document.getElementById("empty");
   rowsEl.innerHTML = "";
-  const sorted = [...events].sort((a, b) => b.ts - a.ts);
+  const sorted = [...allEvents].sort((a, b) => b.ts - a.ts);
   for (const e of sorted.slice(0, 500)) {
     const tr = document.createElement("tr");
     const time = new Date(e.ts * 1000).toLocaleTimeString();
@@ -245,6 +275,94 @@ function render() {
     rowsEl.appendChild(tr);
   }
   emptyEl.style.display = sorted.length ? "none" : "block";
+}
+
+// -- Step-by-step narrative view --------------------------------------
+// Ignores harness/writer stages entirely (bookkeeping: flag on/off,
+// probe-memory write confirmation) -- the four stages that actually
+// explain HOW a result was reached are detector, gate, remediator,
+// correlator, plus grader for the verdict.
+
+const IGNORED_STAGES = new Set(["harness", "writer"]);
+
+function renderSteps(events) {
+  const wrap = document.getElementById("run-steps");
+  const emptyEl = document.getElementById("no-steps");
+  wrap.innerHTML = "";
+
+  const relevant = events.filter(e => !IGNORED_STAGES.has(e.stage)).sort((a, b) => a.ts - b.ts);
+  if (!relevant.length) {
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  for (const e of relevant) {
+    const time = new Date(e.ts * 1000).toLocaleTimeString();
+    const div = document.createElement("div");
+    div.className = "step";
+    div.innerHTML = `
+      <div class="step-time">${time}</div>
+      <div class="step-dot ${e.stage}"></div>
+      <div class="step-card">
+        <div class="step-title"><span class="stage-label">${e.stage}</span> &middot; ${stepHeadline(e)}</div>
+        <div class="step-detail">${stepDetail(e)}</div>
+      </div>`;
+    wrap.appendChild(div);
+  }
+}
+
+function stepHeadline(e) {
+  switch (e.stage) {
+    case "detector":
+      return e.n_candidates > 0
+        ? `scan found ${e.n_candidates} candidate(s)` : "scan: quiet, nothing crossed threshold";
+    case "gate":
+      if (e.event === "bypassed_forced_incident") return "Gate skipped -- forced incident (testing mode)";
+      if (e.event === "incident") return "opened a real incident";
+      if (e.event === "transient") return "transient blip (not yet sustained)";
+      return "watching (no incident)";
+    case "remediator":
+      if (e.event === "memory_hit_diagnosis") return "matched an existing runbook";
+      if (e.event === "memory_hit") return "found a matching runbook (memory_hit)";
+      if (e.event === "memory_miss") return "no matching runbook -- handing off to Correlator";
+      return e.event;
+    case "correlator":
+      return "reasoned a fresh diagnosis";
+    case "grader":
+      return e.correct_at1 ? "graded CORRECT" : (e.abstained ? "abstained" : "graded WRONG");
+    default:
+      return e.event;
+  }
+}
+
+function stepDetail(e) {
+  const rows = [];
+  const row = (label, value) => { if (value !== undefined && value !== null) rows.push(`<div><span class="k">${label}:</span> ${value}</div>`); };
+
+  if (e.stage === "detector") {
+    row("loudest service", e.loudest);
+  } else if (e.stage === "gate") {
+    row("trigger service", e.trigger_service);
+    row("pattern", e.pattern);
+  } else if (e.stage === "remediator") {
+    row("candidates found", e.candidates_found);
+    if (e.confirm_match !== undefined) row("confirm", `match=${e.confirm_match} confidence=${e.confirm_confidence}`);
+    if (e.fault_class) row("runbook", `${e.fault_class}/${e.service}`);
+    const timings = ["stage0_ms", "stage1_ms", "stage2_ms"].filter(k => e[k] !== undefined)
+      .map(k => `${k.replace("_ms", "")}=${Math.round(e[k])}ms`).join("  ");
+    if (timings) row("real ES|QL/LLM timings", timings);
+  } else if (e.stage === "correlator") {
+    row("diagnosis", `${e.fault_class}/${e.service}`);
+    row("confidence", e.confidence);
+  } else if (e.stage === "grader") {
+    const verdictClass = e.correct_at1 ? "correct" : (e.abstained ? "abstained" : "wrong");
+    const verdictText = e.correct_at1 ? "CORRECT" : (e.abstained ? "ABSTAINED" : "WRONG");
+    rows.push(`<div><span class="verdict ${verdictClass}">${verdictText}</span>`
+      + (e.correct_at1 ? "" : `  <span class="k">truth was</span> ${e.truth_fault_class}/${e.truth_service}`) + `</div>`);
+    row("correct in top 3", e.correct_at3);
+  }
+  return rows.join("") || fieldsToText(e);
 }
 
 function fieldsToText(e) {
@@ -382,7 +500,6 @@ document.getElementById("flags-reset-btn").addEventListener("click", async () =>
 document.getElementById("run-btn").addEventListener("click", async () => {
   const runStatus = document.getElementById("run-status");
   const flag = document.getElementById("run-flag-select").value;
-  const gateOff = document.getElementById("run-gate-off").checked;
   const llm = document.getElementById("run-llm-select").value || null;
   if (!flag) { runStatus.textContent = "pick a flag first"; return; }
 
@@ -391,11 +508,11 @@ document.getElementById("run-btn").addEventListener("click", async () => {
   try {
     const resp = await fetch("/api/run", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ flag, gate_off: gateOff, llm, ...envPayload() }),
+      body: JSON.stringify({ flag, llm, ...envPayload() }),
     });
     const body = await resp.json();
     if (!resp.ok) throw new Error(body.error || ("HTTP " + resp.status));
-    runStatus.textContent = `running (run_id=${body.run_id}) -- watch below, up to 3 min`;
+    runStatus.textContent = `running (run_id=${body.run_id}) -- watch the steps below, up to 2 min`;
     // auto-select this run in the events filter once it shows up
     const tryFocus = setInterval(() => {
       const filterEl = document.getElementById("run-filter");

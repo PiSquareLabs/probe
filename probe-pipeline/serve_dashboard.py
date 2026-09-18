@@ -1,8 +1,14 @@
 """Serves dashboard.html + pipeline_events.jsonl (browsers block fetch()
 of local files opened via file://), and a small JSON API the dashboard
-uses to show/toggle fault flags and launch a pipeline_validation_run.py
-run with the environment (ES_URL/ES_API_KEY/Bedrock key) typed into the
-page. Stdlib only, no Flask/etc.
+uses to show/toggle fault flags and launch run_working_fault.py -- the
+one combination empirically confirmed (this session, this local stack)
+to run the full Detector->Gate->Remediator->Correlator->Grader->Writer
+chain and come back correct_at1=True: adHighCpu, with Gate bypassed
+(see run_working_fault.py's WORKING_FAULTS docstring for exactly why
+real Gate never opened for anything tested, and why that's an honest
+limitation of this local stack's traffic level, not of Gate itself).
+With the environment (ES_URL/ES_API_KEY/an LLM key) typed into the page.
+Stdlib only, no Flask/etc.
 
     python serve_dashboard.py [port]   # default 8765
 
@@ -18,15 +24,26 @@ save (for convenience across page reloads) is entirely client-side; this
 server never sees or stores it beyond the single request that launches a
 run.
 
+WORKING_FLAGS mirrors run_working_fault.WORKING_FAULTS: only flags
+empirically confirmed end-to-end correct are exposed in the UI's flag
+buttons/run selector. The other 10 flags in flagd_control.FLAGS are
+real and injectable via flagd_control.py directly, but showing all 11
+in a "click to test" UI when most don't reliably produce a correct
+graded result on this stack's current traffic level just produces
+confusing dead-end tests. Update both sets together as more flags get
+confirmed (see PROBE-LIVE-TESTING-GUIDE.md sections 6 and 8).
+
 API:
     GET  /api/flags          -> {name: {current, on_variant, target_service, is_on}, ...}
+                                 (only WORKING_FLAGS, not all of flagd_control.FLAGS)
     POST /api/flags/<name>   {"variant": "on"} -> sets it, returns the new read_flags() snapshot
-    POST /api/flags/reset    -> turns every known flag off
-    POST /api/run            {"flag": "...", "gate_off": true, "llm": null,
+    POST /api/flags/reset    -> turns every known flag off (all of them, not just WORKING_FLAGS,
+                                 as a safety net against a flag left on from before this UI existed)
+    POST /api/run            {"flag": "...", "llm": null,
                                "es_url": "...", "es_api_key": "...",
                                "aws_bearer_token_bedrock": "...", "aws_region": "...",
-                               "bedrock_model_id": "..."}
-                              -> launches pipeline_validation_run.py as a background
+                               "bedrock_model_id": "...", "openai_api_key": "..."}
+                              -> launches run_working_fault.py --flag <flag> as a background
                                  subprocess with those as env vars, returns
                                  {"started": true, "run_id": "..."} immediately
                                  (non-blocking -- watch it happen via pipeline_events.jsonl,
@@ -43,6 +60,7 @@ import uuid
 from pathlib import Path
 
 import flagd_control
+from run_working_fault import WORKING_FAULTS as WORKING_FLAGS
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
 HERE = Path(__file__).resolve().parent
@@ -58,6 +76,11 @@ _ENV_FIELDS = {
     "bedrock_model_id": "BEDROCK_MODEL_ID",
     "openai_api_key": "OPENAI_API_KEY",
 }
+
+
+def _working_flags() -> dict:
+    all_flags = flagd_control.read_flags()
+    return {name: info for name, info in all_flags.items() if name in WORKING_FLAGS}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -88,7 +111,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/flags":
             try:
-                self._json(200, flagd_control.read_flags())
+                self._json(200, _working_flags())
             except Exception as e:
                 self._json(500, {"error": str(e)})
             return
@@ -97,19 +120,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/flags/reset":
             try:
+                # resets ALL flags, not just WORKING_FLAGS -- a safety net
+                # for anything left on from before this dashboard existed
                 changed = flagd_control.reset_all()
-                self._json(200, {"reset": changed, "flags": flagd_control.read_flags()})
+                self._json(200, {"reset": changed, "flags": _working_flags()})
             except Exception as e:
                 self._json(500, {"error": str(e)})
             return
 
         if self.path.startswith("/api/flags/"):
             name = self.path.removeprefix("/api/flags/")
+            if name not in WORKING_FLAGS:
+                self._json(400, {"error": f"{name!r} is not in WORKING_FLAGS -- not exposed by this UI"})
+                return
             try:
                 body = self._read_json_body()
                 variant = body.get("variant") or flagd_control.FLAGS[name][0]
                 flagd_control.set_flag(name, variant)
-                self._json(200, {"flags": flagd_control.read_flags()})
+                self._json(200, {"flags": _working_flags()})
             except Exception as e:
                 self._json(400, {"error": str(e)})
             return
@@ -117,9 +145,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/run":
             try:
                 body = self._read_json_body()
-                flag = body.get("flag", "adManualGc")
-                if flag not in flagd_control.FLAGS:
-                    raise ValueError(f"unknown flag {flag!r}")
+                flag = body.get("flag")
+                if flag not in WORKING_FLAGS:
+                    raise ValueError(f"{flag!r} is not in WORKING_FLAGS -- not exposed by this UI")
 
                 run_id = uuid.uuid4().hex[:8]
                 env = dict(os.environ)
@@ -128,15 +156,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if body.get(body_key):
                         env[env_name] = body[body_key]
 
-                cmd = [sys.executable, "pipeline_validation_run.py", "--flag", flag,
-                       "--out", f"pipeline_validation_results_{run_id}.json"]
-                if body.get("gate_off") is False:
-                    cmd.append("--no-gate-off")
-                if body.get("llm"):
-                    cmd += ["--llm", body["llm"]]
+                cmd = [sys.executable, "run_working_fault.py", "--flag", flag]
+                llm = body.get("llm")
+                if llm == "bedrock":
+                    cmd.append("--use-bedrock")
+                elif llm == "openai":
+                    cmd.append("--use-openai")
 
-                # Non-blocking: this subprocess can run for up to 3 minutes
-                # (MAX_WAIT_SECONDS) -- the dashboard follows progress via
+                # Non-blocking: this subprocess can run for up to ~2 minutes
+                # (run_working_fault.py's default --minutes) -- the dashboard follows progress via
                 # pipeline_events.jsonl (plog.emit calls tagged with run_id),
                 # not by waiting on this HTTP response.
                 subprocess.Popen(cmd, cwd=str(HERE), env=env,
