@@ -93,6 +93,12 @@ class Diagnosis:
     symptom: str
     steps: list[str]
     source: Literal["memory_hit", "correlator"]
+    # Tokens spent on the Correlator's one reasoning call (contract #4
+    # step 6) to reach this Diagnosis. 0 when source == "memory_hit" --
+    # the Correlator never ran, so there's nothing to charge here (the
+    # Remediator's own confirm-call tokens live on RemediatorOutput.tokens
+    # instead, since that call happens whether or not this is a hit).
+    tokens: int = 0
 
     @property
     def top1(self) -> DiagnosisCandidate:
@@ -157,3 +163,8 @@ class RemediatorOutput:
     ruled_out: list[RuledOut]
     confirm: dict  # {"match": bool, "confidence": float}
     timings_ms: dict  # {"stage0": float, "stage1": float, "stage2": float}
+    # Tokens spent on stage-2 confirm calls, summed across every candidate
+    # tried this incident (Case H tries top-1, then top-2 on rejection --
+    # both cost tokens). 0 on a cache hit that never reached stage 2, and
+    # 0 when there were no candidates to confirm at all (Cases A/G).
+    tokens: int = 0

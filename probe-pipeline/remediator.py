@@ -209,10 +209,17 @@ class Remediator:
             result = self._confirm_fn(candidate, fingerprint, ruled_out)
             if not isinstance(result, dict) or "match" not in result or "confidence" not in result:
                 raise ValueError("confirm response missing match/confidence")
-            return {"match": bool(result["match"]), "confidence": float(result["confidence"])}
+            return {
+                "match": bool(result["match"]),
+                "confidence": float(result["confidence"]),
+                "tokens": int(result.get("tokens", 0)),
+            }
         except Exception:
-            # Case J: malformed confirm response is never a hit.
-            return {"match": False, "confidence": 0.0, "confirm_error": True}
+            # Case J: malformed confirm response is never a hit. A
+            # confirm_fn that isn't llm_openai.confirm (default_confirm_stub,
+            # or a test's own lambda) never reports tokens -- defaulting to
+            # 0 here is correct, not a lost measurement.
+            return {"match": False, "confidence": 0.0, "confirm_error": True, "tokens": 0}
 
     # -- entry point -----------------------------------------------------
 
@@ -254,10 +261,15 @@ class Remediator:
 
         confirm_result = {"match": False, "confidence": 0.0}
         matched_runbook: dict | None = None
+        stage2_tokens = 0
         if candidates:
             t2 = time.perf_counter()
             for candidate in candidates:
                 confirm_result = self._confirm(candidate, fingerprint, ruled_out)
+                # Summed, not overwritten -- Case H tries top-1 then top-2
+                # on rejection, and both calls cost tokens even though
+                # only the last confirm_result survives to the caller.
+                stage2_tokens += confirm_result.get("tokens", 0)
                 if confirm_result["match"]:
                     matched_runbook = candidate
                     break
@@ -273,6 +285,7 @@ class Remediator:
                 ruled_out=ruled_out,
                 confirm=confirm_result,
                 timings_ms=timings_ms,
+                tokens=stage2_tokens,
             )
 
         # Never cache a miss (contract #7a) -- next lookup must search.
@@ -283,4 +296,5 @@ class Remediator:
             ruled_out=ruled_out,
             confirm=confirm_result,
             timings_ms=timings_ms,
+            tokens=stage2_tokens,
         )

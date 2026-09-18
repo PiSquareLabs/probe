@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "memory-compare",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "uvicorn", "compare_server:app", "--app-dir", "probe-pipeline", "--port", "8010"],
+      "port": 8010
+    }
+  ]
+}

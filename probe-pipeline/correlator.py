@@ -254,5 +254,6 @@ class Correlator:
             symptom=symptom,
             steps=reasoning.get("steps", []),
             source="correlator",
+            tokens=int(reasoning.get("tokens", 0)),
         )
         return diagnosis, evidence

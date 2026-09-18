@@ -16,6 +16,7 @@ runbook.
 """
 from __future__ import annotations
 
+import agent_builder
 import es_client
 from remediator import Remediator
 from schemas import Diagnosis, Fingerprint, ProbeRun
@@ -187,13 +188,28 @@ class Writer:
         es_client.update_doc("probe-memory", runbook_id, {"verified_by": verified_by})
         self._remediator.invalidate(runbook_id)
 
-    def mark_jira_fixed(self, runbook_id: str) -> None:
+    def mark_jira_fixed(self, runbook_id: str) -> dict:
         existing = es_client.get_doc("probe-memory", runbook_id)
         verified_by = list(existing.get("verified_by", [])) if existing else []
         if "human" not in verified_by:
             verified_by.append("human")
         es_client.update_doc("probe-memory", runbook_id, {"verified_by": verified_by, "status": "verified"})
         self._remediator.invalidate(runbook_id)
+
+        # A human closing the ticket Fixed is the one signal this runbook's
+        # diagnosis was actually checked, not just self-confirmed by the
+        # confirm agent -- worth a one-time write to give this service its
+        # own Agent Builder candidate-query tool (agent_builder.py).
+        if existing is None:
+            return {"verified": True, "tool": {"provisioned": False, "reason": "no runbook doc to read fault_class/service from"}}
+        tool_result = agent_builder.upsert_candidate_query_tool(
+            fault_class=existing.get("fault_class"),
+            service=existing.get("service"),
+            root_cause=existing.get("root_cause", ""),
+            steps=existing.get("steps", []),
+            signature=existing.get("signature", {}),
+        )
+        return {"verified": True, "tool": tool_result}
 
     def mark_jira_rejected(self, fault_class: str, service: str, incident_id: str, symptom: str) -> None:
         self._write_ruled_out(fault_class, service, incident_id, symptom, verified_by="human")

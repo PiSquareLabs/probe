@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Similar Incident Search</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #17211f;
+    --ink-soft: #4b5a56;
+    --paper: #f6f4ee;
+    --paper-raised: #ffffff;
+    --line: #d9d4c6;
+    --miss: #b5661f;
+    --miss-bg: #fbeee0;
+    --hit: #1f7a5c;
+    --hit-bg: #e4f3ec;
+    --accent: #2a6f6a;
+    --shadow: 0 1px 0 rgba(23, 33, 31, 0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #eae7dd;
+      --ink-soft: #a9b3af;
+      --paper: #14201d;
+      --paper-raised: #1b2a26;
+      --line: #2c3934;
+      --miss: #e0955a;
+      --miss-bg: #2e2118;
+      --hit: #57c79b;
+      --hit-bg: #17281f;
+      --accent: #57c79b;
+      --shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 40px 20px 56px;
+    display: flex;
+    justify-content: center;
+  }
+  .page { width: 100%; max-width: 860px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); display: inline-block; }
+  .dot.live { background: var(--hit); box-shadow: 0 0 0 3px var(--hit-bg); }
+  h1 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 600;
+    font-size: clamp(28px, 5vw, 40px); line-height: 1.08; margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); font-size: 16px; line-height: 1.55; max-width: 60ch; margin: 0 0 24px; }
+  .lede code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.9em;
+    background: var(--paper-raised); border: 1px solid var(--line);
+    padding: 0.1em 0.4em; border-radius: 4px;
+  }
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 28px;
+  }
+  button {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+    padding: 11px 18px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink);
+    transition: transform 0.08s ease, box-shadow 0.15s ease;
+  }
+  button:hover:not(:disabled) { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.run-miss { border-color: var(--miss); color: var(--miss); }
+  button.run-hit { border-color: var(--hit); color: var(--hit); }
+  button.reset { color: var(--ink-soft); margin-left: auto; }
+  .status-line { font-size: 12.5px; color: var(--ink-soft); font-family: "IBM Plex Mono", ui-monospace, monospace; min-height: 1.4em; }
+
+  .runs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+  @media (max-width: 620px) { .runs { grid-template-columns: 1fr; } }
+
+  .run {
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; box-shadow: var(--shadow); position: relative;
+    border-top: 3px solid var(--line);
+    transition: border-color 0.3s ease;
+  }
+  .run.is-miss { border-top-color: var(--miss); }
+  .run.is-hit  { border-top-color: var(--hit); }
+
+  .run-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; gap: 10px; }
+  .run-label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .badge { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 999px; background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); }
+  .badge.miss { background: var(--miss-bg); color: var(--miss); border-color: transparent; }
+  .badge.hit  { background: var(--hit-bg); color: var(--hit); border-color: transparent; }
+
+  .run-title { font-size: 18px; font-weight: 650; margin: 2px 0 18px; color: var(--ink-soft); }
+  .run.filled .run-title { color: var(--ink); }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 18px; }
+  .stat dt { font-size: 11px; color: var(--ink-soft); margin-bottom: 3px; }
+  .stat dd { margin: 0; font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 17px; font-weight: 600; }
+  .stat dd.pending { color: var(--ink-soft); font-weight: 500; }
+
+  .token-track { height: 10px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); overflow: hidden; margin-bottom: 8px; }
+  .token-fill { height: 100%; border-radius: 999px; width: 0%; transition: width 0.5s ease; }
+  .run.is-miss .token-fill { background: var(--miss); }
+  .run.is-hit .token-fill { background: var(--hit); }
+
+  .token-caption { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-soft); }
+  .token-caption strong { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--ink); }
+
+  .callflow { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--ink-soft); line-height: 1.7; }
+  .callflow b { color: var(--ink); font-weight: 600; }
+
+  .summary {
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 28px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 26px; flex-wrap: wrap;
+    opacity: 0; transform: translateY(6px); transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+  }
+  .summary.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .summary-figure { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: clamp(38px, 7vw, 52px); font-weight: 700; color: var(--accent); line-height: 1; white-space: nowrap; }
+  .summary-figure sup { font-size: 0.4em; font-weight: 600; margin-left: 2px; }
+  .summary-text { flex: 1; min-width: 220px; }
+  .summary-text h2 { font-family: "Fraunces", Georgia, serif; font-size: 19px; font-weight: 600; margin: 0 0 6px; }
+  .summary-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  .checks { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; min-height: 30px; }
+  .check { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); }
+  .check.pass { color: var(--hit); background: var(--hit-bg); }
+  .check.fail { color: var(--miss); background: var(--miss-bg); }
+
+  .source-note { margin-top: 26px; font-size: 12.5px; color: var(--ink-soft); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .source-note code { color: var(--ink); }
+  .error-banner {
+    display: none; background: var(--miss-bg); color: var(--miss); border: 1px solid var(--miss);
+    border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 18px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .error-banner.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow"><span class="dot" id="live-dot"></span> Probe · Remediator search</p>
+  <h1>Finding a similar incident beats reasoning it out again</h1>
+  <p class="lede">
+    Two different incidents, not one replayed twice. The first finds nothing
+    in <code>probe-memory</code> and reasons from scratch. The second is a
+    different fault with a different dependency — too different for an exact
+    match — so it has to search for the nearest existing runbook and judge
+    whether it actually applies.
+  </p>
+
+  <div class="error-banner" id="error-banner"></div>
+
+  <div class="controls">
+    <button class="run-miss" id="btn-miss">Run memory_miss →</button>
+    <button class="run-hit" id="btn-hit" disabled>Run memory_hit →</button>
+    <button class="reset" id="btn-reset">Reset</button>
+    <span class="status-line" id="status-line"></span>
+  </div>
+
+  <div class="runs">
+    <div class="run is-miss" id="card-miss">
+      <div class="run-head">
+        <span class="run-label">Run 001 · cartFailure</span>
+        <span class="badge miss">memory_miss</span>
+      </div>
+      <div class="run-title" id="title-miss">Not run yet</div>
+      <dl class="stat-grid">
+        <div class="stat"><dt>Reasoning calls</dt><dd class="pending" data-f="reasoning_calls">—</dd></div>
+        <div class="stat"><dt>Confirm calls</dt><dd class="pending" data-f="confirm_calls">—</dd></div>
+        <div class="stat"><dt>Reasoning tokens</dt><dd class="pending" data-f="reasoning_tokens">—</dd></div>
+        <div class="stat"><dt>Confirm tokens</dt><dd class="pending" data-f="confirm_tokens">—</dd></div>
+      </dl>
+      <div class="token-track"><div class="token-fill" data-f="fill"></div></div>
+      <div class="token-caption">Total tokens <strong data-f="total_tokens">—</strong></div>
+      <div class="callflow">Cache, stage 0, and stage 1 all come back empty &rarr; <b>Correlator.correlate()</b> runs its one reasoning call &rarr; Writer persists the answer as a new runbook in <b>probe-memory</b>.</div>
+      <div class="callflow" id="answer-miss" style="display:none;"></div>
+      <div class="callflow" id="written-miss" style="display:none;"></div>
+    </div>
+
+    <div class="run is-hit" id="card-hit">
+      <div class="run-head">
+        <span class="run-label">Run 002 · paymentUnreachable</span>
+        <span class="badge" id="badge-hit">?</span>
+      </div>
+      <div class="run-title" id="title-hit">Not run yet</div>
+      <dl class="stat-grid">
+        <div class="stat"><dt>Reasoning calls</dt><dd class="pending" data-f="reasoning_calls">—</dd></div>
+        <div class="stat"><dt>Confirm calls</dt><dd class="pending" data-f="confirm_calls">—</dd></div>
+        <div class="stat"><dt>Reasoning tokens</dt><dd class="pending" data-f="reasoning_tokens">—</dd></div>
+        <div class="stat"><dt>Confirm tokens</dt><dd class="pending" data-f="confirm_tokens">—</dd></div>
+      </dl>
+      <div class="token-track"><div class="token-fill" data-f="fill"></div></div>
+      <div class="token-caption">Total tokens <strong data-f="total_tokens">—</strong></div>
+      <div class="callflow">Different dependency than run 001 &rarr; exact match fails &rarr; stage 1 searches by signature overlap + symptom similarity &rarr; the nearest candidate goes to a confirm call.</div>
+      <div class="callflow" id="found-via" style="display:none;"></div>
+      <div class="callflow" id="answer-hit" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="summary-figure" id="summary-figure">—</div>
+    <div class="summary-text">
+      <h2 id="summary-title">Run both to see the saving</h2>
+      <p id="summary-body">Cold tokens minus warm tokens, as a percentage of the cold run.</p>
+    </div>
+  </div>
+
+  <div class="checks" id="checks"></div>
+
+  <p class="source-note">
+    Each click runs the Remediator/Correlator/Writer end to end and reports
+    OpenAI's own <code>usage.total_tokens</code> for the call it made. Reset
+    clears <code>probe-memory</code> so the pair can run again.
+  </p>
+</div>
+
+<script>
+const btnMiss = document.getElementById('btn-miss');
+const btnHit = document.getElementById('btn-hit');
+const btnReset = document.getElementById('btn-reset');
+const statusLine = document.getElementById('status-line');
+const errorBanner = document.getElementById('error-banner');
+const liveDot = document.getElementById('live-dot');
+
+const results = { miss: null, hit: null };
+
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.classList.add('visible');
+}
+function clearError() {
+  errorBanner.classList.remove('visible');
+}
+
+function fillCard(which, data) {
+  const card = document.getElementById(`card-${which}`);
+  const title = document.getElementById(`title-${which}`);
+  card.classList.add('filled');
+
+  const isHitPath = data.path === 'memory_hit';
+  title.textContent = isHitPath
+    ? 'Found — search turned up a reusable runbook'
+    : 'Cold — Correlator reasoned it out';
+
+  if (which === 'hit') {
+    card.classList.toggle('is-hit', isHitPath);
+    card.classList.toggle('is-miss', !isHitPath);
+    const badge = document.getElementById('badge-hit');
+    badge.textContent = data.path;
+    badge.classList.add(isHitPath ? 'hit' : 'miss');
+
+    const foundVia = document.getElementById('found-via');
+    if (data.found_via) {
+      foundVia.style.display = 'block';
+      foundVia.innerHTML = `<b>Found via:</b> ${data.found_via} — ${data.candidates_considered} candidate(s) considered`;
+    }
+  }
+
+  for (const key of ['reasoning_calls', 'confirm_calls', 'reasoning_tokens', 'confirm_tokens', 'total_tokens']) {
+    const el = card.querySelector(`[data-f="${key}"]`);
+    el.textContent = data[key];
+    el.classList.remove('pending');
+  }
+
+  const answerEl = document.getElementById(`answer-${which}`);
+  if (data.llm_answer) {
+    answerEl.style.display = 'block';
+    answerEl.innerHTML = `<b>${isHitPath ? 'Reused' : 'Diagnosis'}:</b> ${data.llm_answer}`;
+    if (data.llm_error) {
+      answerEl.innerHTML += ' <span style="color: var(--miss)">(call failed / malformed JSON — failed closed)</span>';
+    }
+  }
+
+  if (which === 'miss' && data.written_runbook) {
+    const steps = data.written_runbook.steps.map((s) => `<li>${s}</li>`).join('');
+    const writtenEl = document.getElementById('written-miss');
+    writtenEl.style.display = 'block';
+    writtenEl.innerHTML = `<b>Runbook written to probe-memory:</b> <code>${data.written_runbook.id}</code>` +
+      (steps ? `<ol style="margin: 8px 0 0; padding-left: 20px;">${steps}</ol>` : '');
+  }
+}
+
+function updateFillBars() {
+  const max = Math.max(results.miss?.total_tokens || 0, results.hit?.total_tokens || 0, 1);
+  for (const which of ['miss', 'hit']) {
+    const r = results[which];
+    const bar = document.querySelector(`#card-${which} [data-f="fill"]`);
+    bar.style.width = r ? `${(r.total_tokens / max) * 100}%` : '0%';
+  }
+}
+
+function updateSummary() {
+  const checksEl = document.getElementById('checks');
+  if (!results.miss || !results.hit) return;
+
+  const hitPath = results.hit.path === 'memory_hit';
+  const saved = results.miss.total_tokens - results.hit.total_tokens;
+  const pct = results.miss.total_tokens ? Math.round((saved / results.miss.total_tokens) * 100) : 0;
+
+  document.getElementById('summary').classList.add('visible');
+  if (hitPath) {
+    document.getElementById('summary-figure').innerHTML = `${pct}<sup>%</sup>`;
+    document.getElementById('summary-title').textContent = `${saved} fewer tokens by reusing a similar runbook`;
+    document.getElementById('summary-body').textContent =
+      `${results.miss.total_tokens} tokens to reason cartFailure out cold → ${results.hit.total_tokens} tokens ` +
+      `to confirm paymentUnreachable matched it. The saving is the reasoning call itself.`;
+  } else {
+    document.getElementById('summary-figure').innerHTML = `0<sup>%</sup>`;
+    document.getElementById('summary-title').textContent = `Confirm correctly rejected the near-match`;
+    document.getElementById('summary-body').textContent =
+      `Stage 1 found cartFailure's runbook as a candidate by signature overlap, but the confirm call decided ` +
+      `it doesn't actually explain paymentUnreachable — so Correlator reasoned a fresh answer instead of a false reuse.`;
+  }
+
+  const checks = [
+    [results.miss.path === 'memory_miss', 'run 001 (cartFailure) found nothing — reasoned cold'],
+    [!!results.hit.found_via && results.hit.found_via.includes('stage1'), 'run 002 matched via stage 1 similarity search, not an exact key'],
+    hitPath
+      ? [results.hit.reasoning_calls === 0, 'confirm accepted the match — Correlator never ran']
+      : [results.hit.reasoning_calls === 1, 'confirm rejected the match — Correlator ran fresh'],
+  ];
+  checksEl.innerHTML = checks
+    .map(([ok, label]) => `<span class="check ${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✕'} ${label}</span>`)
+    .join('');
+}
+
+async function runOne(which) {
+  clearError();
+  liveDot.classList.add('live');
+  statusLine.textContent = `Running ${which === 'miss' ? 'memory_miss' : 'memory_hit'}…`;
+  btnMiss.disabled = true;
+  btnHit.disabled = true;
+  try {
+    const res = await fetch(`/api/run/${which}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `request failed (${res.status})`);
+    results[which] = data;
+    fillCard(which, data);
+    updateFillBars();
+    updateSummary();
+    statusLine.textContent = `run ${which === 'miss' ? '001' : '002'} done — path=${data.path}`;
+  } catch (err) {
+    showError(err.message || String(err));
+    statusLine.textContent = '';
+  } finally {
+    liveDot.classList.remove('live');
+    btnMiss.disabled = !!results.miss;
+    btnHit.disabled = !results.miss || !!results.hit;
+  }
+}
+
+btnMiss.addEventListener('click', () => runOne('miss'));
+btnHit.addEventListener('click', () => runOne('hit'));
+
+btnReset.addEventListener('click', async () => {
+  clearError();
+  await fetch('/api/reset', { method: 'POST' });
+  results.miss = null;
+  results.hit = null;
+  for (const which of ['miss', 'hit']) {
+    const card = document.getElementById(`card-${which}`);
+    card.classList.remove('filled');
+    document.getElementById(`title-${which}`).textContent = 'Not run yet';
+    card.querySelectorAll('[data-f]').forEach((el) => {
+      if (el.dataset.f === 'fill') { el.style.width = '0%'; return; }
+      el.textContent = '—';
+      el.classList.add('pending');
+    });
+    const answerEl = document.getElementById(`answer-${which}`);
+    answerEl.style.display = 'none';
+    answerEl.innerHTML = '';
+  }
+  const writtenEl = document.getElementById('written-miss');
+  writtenEl.style.display = 'none';
+  writtenEl.innerHTML = '';
+  document.getElementById('card-hit').classList.remove('is-hit', 'is-miss');
+  const badgeHit = document.getElementById('badge-hit');
+  badgeHit.textContent = '?';
+  badgeHit.classList.remove('hit', 'miss');
+  const foundVia = document.getElementById('found-via');
+  foundVia.style.display = 'none';
+  foundVia.innerHTML = '';
+  document.getElementById('summary').classList.remove('visible');
+  document.getElementById('checks').innerHTML = '';
+  btnMiss.disabled = false;
+  btnHit.disabled = true;
+  statusLine.textContent = 'Reset — store cleared.';
+});
+</script>
+</body>
+</html>
