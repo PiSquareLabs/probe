@@ -58,6 +58,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import flagd_control
 from run_working_fault import WORKING_FAULTS as WORKING_FLAGS
@@ -109,7 +110,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(length))
 
     def do_GET(self):
-        if self.path == "/api/flags":
+        # self.path includes the query string (dashboard.html appends
+        # ?t=<timestamp> as a cache-buster on every fetch) -- comparing
+        # the raw path against a bare route like "/api/flags" always
+        # failed once that cache-buster was added, silently falling
+        # through to static-file serving and 404ing. Strip it first.
+        path = urlsplit(self.path).path
+        if path == "/api/flags":
             try:
                 self._json(200, _working_flags())
             except Exception as e:
@@ -118,7 +125,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path == "/api/flags/reset":
+        path = urlsplit(self.path).path
+        if path == "/api/flags/reset":
             try:
                 # resets ALL flags, not just WORKING_FLAGS -- a safety net
                 # for anything left on from before this dashboard existed
@@ -128,8 +136,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self._json(500, {"error": str(e)})
             return
 
-        if self.path.startswith("/api/flags/"):
-            name = self.path.removeprefix("/api/flags/")
+        if path.startswith("/api/flags/"):
+            name = path.removeprefix("/api/flags/")
             if name not in WORKING_FLAGS:
                 self._json(400, {"error": f"{name!r} is not in WORKING_FLAGS -- not exposed by this UI"})
                 return
@@ -142,7 +150,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self._json(400, {"error": str(e)})
             return
 
-        if self.path == "/api/run":
+        if path == "/api/run":
             try:
                 body = self._read_json_body()
                 flag = body.get("flag")
