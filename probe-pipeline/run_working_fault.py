@@ -48,7 +48,15 @@ MAX_WAIT_SECONDS = 150
 # correct_at1=True. This is Gate bypassed, not Gate working -- see
 # PROBE-LIVE-TESTING-GUIDE.md section 8 for why that distinction matters
 # for anything beyond demonstrating the mechanics.
-WORKING_FAULTS = {"adHighCpu"}
+#
+# adManualGc added after fixing two real bugs in remediator.py's
+# _stage1_hybrid() (FUSE's missing _index METADATA column, and the KEEP
+# clause omitting fault_class/service) -- both found live via this exact
+# flag's own testing. Confirmed twice in a row: memory_hit, confirm
+# confidence 0.9, correct_at1=True, correct_at3=True, ~5.5s total
+# Remediator+Correlator time once the FUSE fix let stage1 skip its slow
+# _search fallback.
+WORKING_FAULTS = {"adHighCpu", "adManualGc"}
 
 
 def set_flag(name: str, variant: str) -> None:
