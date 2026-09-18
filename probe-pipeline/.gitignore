@@ -1,5 +1,8 @@
 pipeline_events.jsonl
 pipeline_validation_results*.json
 pipeline_validation*.log
+pipeline_validation_local*.json
+validate_*.log
+watch_*.log
 run_*.log
 server.log
