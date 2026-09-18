@@ -125,22 +125,28 @@
   <h1>PROBE pipeline dashboard</h1>
   <div class="sub">Live view of pipeline_events.jsonl -- what each stage (Detector, Gate, Remediator, Correlator, ...) is doing, oldest run at bottom.</div>
 
-  <details class="panel" id="env-panel">
-    <summary>Environment (Detector / Remediator / Correlator credentials)</summary>
+  <details class="panel" id="env-panel" open>
+    <summary>&#9881; Settings (Elasticsearch target + LLM key)</summary>
     <div class="panel-body">
-      <div class="env-grid">
+      <div class="run-row" style="margin-bottom:10px">
+        <label><input type="radio" name="es-target" id="es-target-local" value="local" checked> Local (this machine's Docker Elasticsearch)</label>
+        <label><input type="radio" name="es-target" id="es-target-remote" value="remote"> Remote (Elastic Cloud / Serverless)</label>
+      </div>
+      <div class="env-grid" id="remote-fields" style="display:none">
         <label for="env-es-url">ES_URL</label>
         <input type="text" id="env-es-url" placeholder="https://your-project.es.region.provider.elastic.cloud:443">
         <label for="env-es-key">ES_API_KEY</label>
         <input type="password" id="env-es-key" placeholder="ApiKey value">
+      </div>
+      <div class="env-grid" style="margin-top:8px">
+        <label for="env-openai-key">OPENAI_API_KEY</label>
+        <input type="password" id="env-openai-key" placeholder="sk-... (for the LLM: Bedrock dropdown below)">
         <label for="env-bedrock-key">AWS_BEARER_TOKEN_BEDROCK</label>
-        <input type="password" id="env-bedrock-key" placeholder="long-term Bedrock API key (optional)">
+        <input type="password" id="env-bedrock-key" placeholder="long-term Bedrock API key (alternative to OpenAI)">
         <label for="env-aws-region">AWS_REGION</label>
         <input type="text" id="env-aws-region" placeholder="us-east-1">
         <label for="env-bedrock-model">BEDROCK_MODEL_ID</label>
         <input type="text" id="env-bedrock-model" placeholder="us.anthropic.claude-sonnet-4-6">
-        <label for="env-openai-key">OPENAI_API_KEY</label>
-        <input type="password" id="env-openai-key" placeholder="sk-... (optional, alt to Bedrock)">
       </div>
       <div class="run-row" style="margin-top:10px">
         <button id="env-save-btn">Save (this browser only)</button>
@@ -149,8 +155,10 @@
       <div class="env-note">
         Saved to this browser's localStorage, never sent anywhere until you click "Run" below.
         Passed to the local server only as that one subprocess's environment -- never written
-        to disk or logged. This dashboard has no auth and isn't TLS-protected: keep it on
-        localhost, don't expose the port.
+        to disk or logged. On "Local", ES_URL/ES_API_KEY are simply omitted from the run --
+        every script here already falls back to this machine's Elasticsearch automatically when
+        they're unset, no need to type localhost:9200 yourself. This dashboard has no auth and
+        isn't TLS-protected: keep it on localhost, don't expose the port.
       </div>
     </div>
   </details>
@@ -282,15 +290,27 @@ function render() {
 // probe-memory write confirmation) -- the four stages that actually
 // explain HOW a result was reached are detector, gate, remediator,
 // correlator, plus grader for the verdict.
+//
+// Also drops Gate steps that are just the "bypassed" testing-mode noise
+// (run_working_fault.py always bypasses Gate for its confirmed-working
+// flags, so every one of those runs would otherwise show the exact same
+// "Gate skipped" line every single scan) -- a REAL Gate decision
+// (incident/transient/watch from validate_pipeline.py or watch_pipeline.py
+// without --skip-gate) still shows, since that's actual pipeline behavior,
+// not noise.
 
 const IGNORED_STAGES = new Set(["harness", "writer"]);
+const IGNORED_GATE_EVENTS = new Set(["bypassed_forced_incident"]);
 
 function renderSteps(events) {
   const wrap = document.getElementById("run-steps");
   const emptyEl = document.getElementById("no-steps");
   wrap.innerHTML = "";
 
-  const relevant = events.filter(e => !IGNORED_STAGES.has(e.stage)).sort((a, b) => a.ts - b.ts);
+  const relevant = events
+    .filter(e => !IGNORED_STAGES.has(e.stage))
+    .filter(e => !(e.stage === "gate" && IGNORED_GATE_EVENTS.has(e.event)))
+    .sort((a, b) => a.ts - b.ts);
   if (!relevant.length) {
     emptyEl.style.display = "block";
     return;
@@ -383,11 +403,11 @@ function setupAutoRefresh() {
 }
 document.getElementById("auto-refresh").addEventListener("change", setupAutoRefresh);
 
-// -- Environment panel: client-side only until "Run" is clicked -----------
+// -- Settings panel: client-side only until "Run" is clicked ---------------
 
 const ENV_FIELDS = ["env-es-url", "env-es-key", "env-bedrock-key", "env-aws-region",
                      "env-bedrock-model", "env-openai-key"];
-const ENV_STORAGE_KEY = "probe_dashboard_env_v1";
+const ENV_STORAGE_KEY = "probe_dashboard_env_v2";
 
 function loadEnvFromStorage() {
   try {
@@ -395,12 +415,15 @@ function loadEnvFromStorage() {
     for (const id of ENV_FIELDS) {
       if (saved[id] !== undefined) document.getElementById(id).value = saved[id];
     }
+    if (saved["es-target"] === "remote") document.getElementById("es-target-remote").checked = true;
   } catch { /* corrupted or blocked storage -- start blank, not fatal */ }
+  updateTargetVisibility();
 }
 
 function saveEnvToStorage() {
   const values = {};
   for (const id of ENV_FIELDS) values[id] = document.getElementById(id).value;
+  values["es-target"] = document.getElementById("es-target-remote").checked ? "remote" : "local";
   try {
     localStorage.setItem(ENV_STORAGE_KEY, JSON.stringify(values));
     document.getElementById("env-status").textContent = "saved " + new Date().toLocaleTimeString();
@@ -409,10 +432,22 @@ function saveEnvToStorage() {
   }
 }
 
+function updateTargetVisibility() {
+  const isRemote = document.getElementById("es-target-remote").checked;
+  document.getElementById("remote-fields").style.display = isRemote ? "grid" : "none";
+}
+document.getElementById("es-target-local").addEventListener("change", updateTargetVisibility);
+document.getElementById("es-target-remote").addEventListener("change", updateTargetVisibility);
+
 function envPayload() {
+  const isRemote = document.getElementById("es-target-remote").checked;
   return {
-    es_url: document.getElementById("env-es-url").value || null,
-    es_api_key: document.getElementById("env-es-key").value || null,
+    // Local: omit ES_URL/ES_API_KEY entirely so every script's own
+    // fallback (unset -> http://localhost:9200 + this machine's
+    // elastic-start-local password) kicks in, rather than the dashboard
+    // guessing a URL that might not match this host's actual setup.
+    es_url: isRemote ? (document.getElementById("env-es-url").value || null) : null,
+    es_api_key: isRemote ? (document.getElementById("env-es-key").value || null) : null,
     aws_bearer_token_bedrock: document.getElementById("env-bedrock-key").value || null,
     aws_region: document.getElementById("env-aws-region").value || null,
     bedrock_model_id: document.getElementById("env-bedrock-model").value || null,
