@@ -82,13 +82,24 @@ def reset_flag(name: str) -> None:
     set_flag(name, "off")
 
 
-def wait_for_incident(streak_state: dict, gate_instance: gate.Gate, target_service: str, deadline: float):
+def wait_for_incident(streak_state: dict, gate_instance: gate.Gate, target_service: str, deadline: float,
+                       detector_kwargs: dict | None = None):
     """Polls the real Detector until the Gate opens an incident whose
     trigger touches `target_service`, or the deadline passes. Returns
     (decision_or_None, detector_output_or_None).
+
+    `detector_kwargs` flows straight through to zscore_scan.py's own
+    config surface (bucket_seconds, lookback_minutes,
+    min_spans_per_bucket) -- see this script's --min-spans-per-bucket
+    flag. Lowering min_spans_per_bucket trades statistical reliability
+    for feasibility on a low-traffic demo instance; it is NOT something
+    to use for a real validation battery, only for confirming the
+    pipeline's wiring works when the demo simply isn't generating
+    enough load.
     """
+    detector_kwargs = detector_kwargs or {}
     while time.time() < deadline:
-        raw = detector_bridge.scan(streak_state)
+        raw = detector_bridge.scan(streak_state, **detector_kwargs)
         if raw:
             decision = gate_instance.evaluate(raw)
             if decision.kind == "incident" and any(c.service == target_service for c in decision.trigger):
@@ -99,7 +110,7 @@ def wait_for_incident(streak_state: dict, gate_instance: gate.Gate, target_servi
 
 def run_one_flag(flag: str, variant: str, target_service: str, settle: int, streak_state: dict,
                   gate_instance: gate.Gate, remediator_instance: remediator.Remediator,
-                  correlator_instance, symptom: str) -> dict:
+                  correlator_instance, symptom: str, detector_kwargs: dict | None = None) -> dict:
     log: dict = {"flag": flag, "variant": variant, "target_service": target_service}
 
     print(f"=== {flag} (variant={variant!r}, target={target_service}) ===")
@@ -108,7 +119,7 @@ def run_one_flag(flag: str, variant: str, target_service: str, settle: int, stre
     print(f"  injected at {datetime.now(timezone.utc).isoformat()}, settling {settle}s...")
     time.sleep(settle)
 
-    decision, raw = wait_for_incident(streak_state, gate_instance, target_service, injected_at + MAX_WAIT)
+    decision, raw = wait_for_incident(streak_state, gate_instance, target_service, injected_at + MAX_WAIT, detector_kwargs)
     reset_flag(flag)
 
     if decision is None:
@@ -129,6 +140,12 @@ def run_one_flag(flag: str, variant: str, target_service: str, settle: int, stre
     rem_out = remediator_instance.remediate(decision, fingerprint, symptom)
     log["remediator_path"] = rem_out.path
     log["remediator_timings_ms"] = rem_out.timings_ms
+    log["remediator_confirm"] = rem_out.confirm
+    log["remediator_candidates"] = rem_out.candidates
+    log["remediator_ruled_out"] = [
+        {"proposed_fault_class": r.proposed_fault_class, "proposed_service": r.proposed_service, "incident": r.incident}
+        for r in rem_out.ruled_out
+    ]
     print(f"  Remediator: {rem_out.path}  (timings_ms={rem_out.timings_ms})")
 
     truth = catalog_runbook.read_by_flag(flag)
@@ -139,8 +156,12 @@ def run_one_flag(flag: str, variant: str, target_service: str, settle: int, stre
 
     if rem_out.path == "memory_miss":
         diagnosis, evidence = correlator_instance.correlate(decision, raw, rem_out, symptom)
-        log["diagnosis_top1"] = {"fault_class": diagnosis.top1.fault_class, "service": diagnosis.top1.service, "confidence": diagnosis.top1.confidence}
-        log["evidence_keys_present"] = {k: bool(v) for k, v in evidence.items()}
+        log["diagnosis_candidates"] = [
+            {"fault_class": c.fault_class, "service": c.service, "confidence": c.confidence} for c in diagnosis.candidates
+        ]
+        log["diagnosis_root_cause"] = diagnosis.root_cause
+        log["diagnosis_steps"] = diagnosis.steps
+        log["evidence"] = evidence  # full block, not just presence -- for the report reader
         print(f"  Correlator: top1={diagnosis.top1.fault_class}/{diagnosis.top1.service} (confidence={diagnosis.top1.confidence})")
     else:
         # memory_hit -- the Remediator's own runbook IS the diagnosis;
@@ -157,7 +178,9 @@ def run_one_flag(flag: str, variant: str, target_service: str, settle: int, stre
 
     probe_run = grader.grade_incident(diagnosis, rem_out, truth.fault_class, truth.service)
     log["graded"] = True
+    log["truth"] = {"fault_class": truth.fault_class, "service": truth.service}
     log["correct_at1"] = probe_run.correct_at1
+    log["correct_at3"] = probe_run.correct_at3
     log["abstained"] = probe_run.abstained
     print(f"  Grader: correct_at1={probe_run.correct_at1}  abstained={probe_run.abstained}  (truth={truth.fault_class}/{truth.service})")
 
@@ -174,7 +197,12 @@ def main():
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--settle", type=int, default=15)
     ap.add_argument("--use-openai", action="store_true", help="wire llm_openai.confirm/reason instead of the fail-closed stubs")
+    ap.add_argument("--min-spans-per-bucket", type=int, default=None,
+                     help="override zscore_scan.py's MIN_SPANS_PER_BUCKET (default 20) for a low-traffic demo "
+                          "instance -- lowers statistical reliability, only for confirming the pipeline's wiring "
+                          "works, not for a real validation battery")
     args = ap.parse_args()
+    detector_kwargs = {"min_spans_per_bucket": args.min_spans_per_bucket} if args.min_spans_per_bucket else {}
 
     if not args.use_openai:
         print(
@@ -208,7 +236,8 @@ def main():
             continue
         results.append(
             run_one_flag(flag, variant, target, args.settle, streak_state, gate_instance,
-                         remediator_instance, correlator_instance, symptom=f"{flag} injected on {target}")
+                         remediator_instance, correlator_instance, symptom=f"{flag} injected on {target}",
+                         detector_kwargs=detector_kwargs)
         )
 
     print("=" * 70)
