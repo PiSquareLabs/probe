@@ -1,0 +1,5 @@
+pipeline_events.jsonl
+pipeline_validation_results*.json
+pipeline_validation*.log
+run_*.log
+server.log

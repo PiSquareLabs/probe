@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PROBE pipeline dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --text: #e6e9ef; --dim: #8b93a3;
+    --detector: #4fc3f7; --gate: #ffb74d; --remediator: #81c784; --correlator: #ba68c8;
+    --harness: #90a4ae; --grader: #f06292; --writer: #a1887f; --error: #ef5350;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f5f6f8; --panel: #ffffff; --border: #dde1e8; --text: #1a1d24; --dim: #6b7280; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--dim); font-size: 12px; margin-bottom: 16px; }
+  .stages {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stage-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; border-top: 3px solid var(--dim);
+  }
+  .stage-card .name { font-weight: 600; text-transform: capitalize; }
+  .stage-card .last-event { color: var(--dim); font-size: 12px; margin-top: 4px; word-break: break-word; }
+  .stage-card .count { float: right; color: var(--dim); font-size: 12px; }
+  .stage-card.detector { border-top-color: var(--detector); }
+  .stage-card.gate { border-top-color: var(--gate); }
+  .stage-card.remediator { border-top-color: var(--remediator); }
+  .stage-card.correlator { border-top-color: var(--correlator); }
+  .stage-card.harness { border-top-color: var(--harness); }
+  .stage-card.grader { border-top-color: var(--grader); }
+  .stage-card.writer { border-top-color: var(--writer); }
+  .controls { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+  select, button, input[type=text] {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--dim); }
+  #status { color: var(--dim); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; color: var(--dim); font-weight: 500; padding: 6px 8px;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg);
+  }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
+    font-weight: 600; color: #0f1115;
+  }
+  .badge.detector { background: var(--detector); }
+  .badge.gate { background: var(--gate); }
+  .badge.remediator { background: var(--remediator); }
+  .badge.correlator { background: var(--correlator); }
+  .badge.harness { background: var(--harness); }
+  .badge.grader { background: var(--grader); }
+  .badge.writer { background: var(--writer); }
+  .fields { color: var(--dim); font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12px; }
+  .event.error { color: var(--error); font-weight: 600; }
+  #table-wrap { max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  #empty { color: var(--dim); padding: 24px; text-align: center; }
+  details.panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 12px;
+  }
+  details.panel > summary { cursor: pointer; font-weight: 600; }
+  details.panel .panel-body { margin-top: 10px; }
+  .env-grid { display: grid; grid-template-columns: 200px 1fr; gap: 8px; align-items: center; max-width: 640px; }
+  .env-grid input { width: 100%; }
+  .env-note { color: var(--dim); font-size: 12px; margin-top: 8px; }
+  .flag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .flag-btn {
+    text-align: left; display: flex; flex-direction: column; gap: 2px;
+    padding: 8px 10px;
+  }
+  .flag-btn .flag-name { font-weight: 600; }
+  .flag-btn .flag-meta { font-size: 11px; color: var(--dim); }
+  .flag-btn.is-on { border-color: var(--error); background: color-mix(in srgb, var(--error) 15%, var(--panel)); }
+  .run-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #run-status { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+  <h1>PROBE pipeline dashboard</h1>
+  <div class="sub">Live view of pipeline_events.jsonl -- what each stage (Detector, Gate, Remediator, Correlator, ...) is doing, oldest run at bottom.</div>
+
+  <details class="panel" id="env-panel">
+    <summary>Environment (Detector / Remediator / Correlator credentials)</summary>
+    <div class="panel-body">
+      <div class="env-grid">
+        <label for="env-es-url">ES_URL</label>
+        <input type="text" id="env-es-url" placeholder="https://your-project.es.region.provider.elastic.cloud:443">
+        <label for="env-es-key">ES_API_KEY</label>
+        <input type="password" id="env-es-key" placeholder="ApiKey value">
+        <label for="env-bedrock-key">AWS_BEARER_TOKEN_BEDROCK</label>
+        <input type="password" id="env-bedrock-key" placeholder="long-term Bedrock API key (optional)">
+        <label for="env-aws-region">AWS_REGION</label>
+        <input type="text" id="env-aws-region" placeholder="us-east-1">
+        <label for="env-bedrock-model">BEDROCK_MODEL_ID</label>
+        <input type="text" id="env-bedrock-model" placeholder="us.anthropic.claude-sonnet-4-6">
+        <label for="env-openai-key">OPENAI_API_KEY</label>
+        <input type="password" id="env-openai-key" placeholder="sk-... (optional, alt to Bedrock)">
+      </div>
+      <div class="run-row" style="margin-top:10px">
+        <button id="env-save-btn">Save (this browser only)</button>
+        <span id="env-status" class="env-note"></span>
+      </div>
+      <div class="env-note">
+        Saved to this browser's localStorage, never sent anywhere until you click "Run" below.
+        Passed to the local server only as that one subprocess's environment -- never written
+        to disk or logged. This dashboard has no auth and isn't TLS-protected: keep it on
+        localhost, don't expose the port.
+      </div>
+    </div>
+  </details>
+
+  <details class="panel" id="flags-panel" open>
+    <summary>Fault injection flags</summary>
+    <div class="panel-body">
+      <div class="run-row" style="margin-bottom:10px">
+        <button id="flags-refresh-btn">Refresh flag state</button>
+        <button id="flags-reset-btn">Reset all to off</button>
+        <span id="flags-status" class="env-note"></span>
+      </div>
+      <div class="flag-grid" id="flag-buttons"></div>
+    </div>
+  </details>
+
+  <details class="panel" id="run-panel" open>
+    <summary>Run pipeline validation</summary>
+    <div class="panel-body">
+      <div class="run-row">
+        <label>Flag: <select id="run-flag-select"></select></label>
+        <label><input type="checkbox" id="run-gate-off" checked> force incident if Gate doesn't open one (GATE_OFF)</label>
+        <label>LLM: <select id="run-llm-select">
+          <option value="">stub (fail-closed, no call)</option>
+          <option value="bedrock">Bedrock</option>
+          <option value="openai">OpenAI</option>
+        </select></label>
+        <button id="run-btn">Run</button>
+        <span id="run-status"></span>
+      </div>
+    </div>
+  </details>
+
+  <div class="controls">
+    <label>Run: <select id="run-filter"><option value="">all runs</option></select></label>
+    <button id="refresh-btn">Refresh now</button>
+    <label><input type="checkbox" id="auto-refresh" checked> auto-refresh every 3s</label>
+    <span id="status"></span>
+  </div>
+
+  <div class="stages" id="stage-cards"></div>
+
+  <div id="table-wrap">
+    <table>
+      <thead><tr><th>time</th><th>run</th><th>stage</th><th>event</th><th>fields</th></tr></thead>
+      <tbody id="event-rows"></tbody>
+    </table>
+    <div id="empty" style="display:none">No events yet. Run a pipeline script that imports pipeline_log (e.g. pipeline_validation_run.py) and this will populate live.</div>
+  </div>
+
+<script>
+const LOG_PATH = "pipeline_events.jsonl";
+let allEvents = [];
+let knownRuns = new Set();
+
+async function fetchEvents() {
+  const statusEl = document.getElementById("status");
+  try {
+    const resp = await fetch(LOG_PATH + "?t=" + Date.now(), { cache: "no-store" });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const text = await resp.text();
+    allEvents = text.split("\n").filter(l => l.trim()).map(l => {
+      try { return JSON.parse(l); } catch { return null; }
+    }).filter(Boolean);
+    statusEl.textContent = `${allEvents.length} events, last fetch ${new Date().toLocaleTimeString()}`;
+    render();
+  } catch (e) {
+    statusEl.textContent = "fetch failed: " + e.message + " -- is serve_dashboard.py running?";
+  }
+}
+
+function render() {
+  const filterEl = document.getElementById("run-filter");
+  const selectedRun = filterEl.value;
+
+  // populate run filter options without losing selection
+  const runs = [...new Set(allEvents.map(e => e.run_id))];
+  for (const r of runs) {
+    if (!knownRuns.has(r)) {
+      knownRuns.add(r);
+      const opt = document.createElement("option");
+      opt.value = r; opt.textContent = r;
+      filterEl.appendChild(opt);
+    }
+  }
+
+  const events = selectedRun ? allEvents.filter(e => e.run_id === selectedRun) : allEvents;
+
+  // per-stage summary cards: last event + count, for the selected run
+  // (or across all runs if none selected)
+  const byStage = {};
+  for (const e of events) {
+    if (!byStage[e.stage]) byStage[e.stage] = { count: 0, last: null };
+    byStage[e.stage].count++;
+    if (!byStage[e.stage].last || e.ts > byStage[e.stage].last.ts) byStage[e.stage].last = e;
+  }
+  const cardsEl = document.getElementById("stage-cards");
+  cardsEl.innerHTML = "";
+  const stageOrder = ["harness", "detector", "gate", "remediator", "correlator", "grader", "writer"];
+  const stages = [...new Set([...stageOrder, ...Object.keys(byStage)])].filter(s => byStage[s]);
+  for (const stage of stages) {
+    const info = byStage[stage];
+    const div = document.createElement("div");
+    div.className = "stage-card " + stage;
+    const fieldsPreview = fieldsToText(info.last);
+    div.innerHTML = `<span class="count">${info.count}</span>
+      <div class="name">${stage}</div>
+      <div class="last-event"><b>${info.last.event}</b><br>${fieldsPreview}</div>`;
+    cardsEl.appendChild(div);
+  }
+
+  // event table, newest first
+  const rowsEl = document.getElementById("event-rows");
+  const emptyEl = document.getElementById("empty");
+  rowsEl.innerHTML = "";
+  const sorted = [...events].sort((a, b) => b.ts - a.ts);
+  for (const e of sorted.slice(0, 500)) {
+    const tr = document.createElement("tr");
+    const time = new Date(e.ts * 1000).toLocaleTimeString();
+    const eventClass = e.event === "error" ? "event error" : "event";
+    tr.innerHTML = `<td>${time}</td>
+      <td>${e.run_id}</td>
+      <td><span class="badge ${e.stage}">${e.stage}</span></td>
+      <td class="${eventClass}">${e.event}</td>
+      <td class="fields">${fieldsToText(e)}</td>`;
+    rowsEl.appendChild(tr);
+  }
+  emptyEl.style.display = sorted.length ? "none" : "block";
+}
+
+function fieldsToText(e) {
+  if (!e) return "";
+  const { ts, run_id, stage, event, ...rest } = e;
+  return Object.entries(rest).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
+}
+
+document.getElementById("refresh-btn").addEventListener("click", fetchEvents);
+document.getElementById("run-filter").addEventListener("change", render);
+
+let timer = null;
+function setupAutoRefresh() {
+  if (timer) clearInterval(timer);
+  if (document.getElementById("auto-refresh").checked) {
+    timer = setInterval(fetchEvents, 3000);
+  }
+}
+document.getElementById("auto-refresh").addEventListener("change", setupAutoRefresh);
+
+// -- Environment panel: client-side only until "Run" is clicked -----------
+
+const ENV_FIELDS = ["env-es-url", "env-es-key", "env-bedrock-key", "env-aws-region",
+                     "env-bedrock-model", "env-openai-key"];
+const ENV_STORAGE_KEY = "probe_dashboard_env_v1";
+
+function loadEnvFromStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ENV_STORAGE_KEY) || "{}");
+    for (const id of ENV_FIELDS) {
+      if (saved[id] !== undefined) document.getElementById(id).value = saved[id];
+    }
+  } catch { /* corrupted or blocked storage -- start blank, not fatal */ }
+}
+
+function saveEnvToStorage() {
+  const values = {};
+  for (const id of ENV_FIELDS) values[id] = document.getElementById(id).value;
+  try {
+    localStorage.setItem(ENV_STORAGE_KEY, JSON.stringify(values));
+    document.getElementById("env-status").textContent = "saved " + new Date().toLocaleTimeString();
+  } catch {
+    document.getElementById("env-status").textContent = "couldn't save (private window / storage blocked) -- values still usable for this session";
+  }
+}
+
+function envPayload() {
+  return {
+    es_url: document.getElementById("env-es-url").value || null,
+    es_api_key: document.getElementById("env-es-key").value || null,
+    aws_bearer_token_bedrock: document.getElementById("env-bedrock-key").value || null,
+    aws_region: document.getElementById("env-aws-region").value || null,
+    bedrock_model_id: document.getElementById("env-bedrock-model").value || null,
+    openai_api_key: document.getElementById("env-openai-key").value || null,
+  };
+}
+
+document.getElementById("env-save-btn").addEventListener("click", saveEnvToStorage);
+
+// -- Fault injection flags -------------------------------------------------
+
+async function fetchFlags() {
+  const statusEl = document.getElementById("flags-status");
+  try {
+    const resp = await fetch("/api/flags?t=" + Date.now(), { cache: "no-store" });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const flags = await resp.json();
+    renderFlags(flags);
+    statusEl.textContent = "updated " + new Date().toLocaleTimeString();
+    return flags;
+  } catch (e) {
+    statusEl.textContent = "fetch failed: " + e.message;
+    return null;
+  }
+}
+
+function renderFlags(flags) {
+  const grid = document.getElementById("flag-buttons");
+  grid.innerHTML = "";
+  const select = document.getElementById("run-flag-select");
+  const prevSelected = select.value;
+  select.innerHTML = "";
+  for (const [name, info] of Object.entries(flags)) {
+    const btn = document.createElement("button");
+    btn.className = "flag-btn" + (info.is_on ? " is-on" : "");
+    btn.innerHTML = `<span class="flag-name">${name}</span>
+      <span class="flag-meta">target: ${info.target_service ?? "none"} | current: ${info.current}</span>`;
+    btn.title = info.is_on ? "Click to turn off" : `Click to turn on (${info.on_variant})`;
+    btn.addEventListener("click", () => toggleFlag(name, info));
+    grid.appendChild(btn);
+
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name + (info.target_service ? ` (${info.target_service})` : " (no target)");
+    select.appendChild(opt);
+  }
+  if ([...select.options].some(o => o.value === prevSelected)) select.value = prevSelected;
+  else if (flags["adManualGc"]) select.value = "adManualGc";
+}
+
+async function toggleFlag(name, info) {
+  const variant = info.is_on ? "off" : info.on_variant;
+  document.getElementById("flags-status").textContent = `setting ${name} -> ${variant}...`;
+  try {
+    const resp = await fetch("/api/flags/" + encodeURIComponent(name), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variant }),
+    });
+    const body = await resp.json();
+    if (!resp.ok) throw new Error(body.error || ("HTTP " + resp.status));
+    renderFlags(body.flags);
+    document.getElementById("flags-status").textContent = `${name} -> ${variant}`;
+  } catch (e) {
+    document.getElementById("flags-status").textContent = "failed: " + e.message;
+  }
+}
+
+document.getElementById("flags-refresh-btn").addEventListener("click", fetchFlags);
+document.getElementById("flags-reset-btn").addEventListener("click", async () => {
+  document.getElementById("flags-status").textContent = "resetting...";
+  try {
+    const resp = await fetch("/api/flags/reset", { method: "POST" });
+    const body = await resp.json();
+    if (!resp.ok) throw new Error(body.error || ("HTTP " + resp.status));
+    renderFlags(body.flags);
+    document.getElementById("flags-status").textContent =
+      body.reset.length ? `reset: ${body.reset.join(", ")}` : "nothing was on";
+  } catch (e) {
+    document.getElementById("flags-status").textContent = "failed: " + e.message;
+  }
+});
+
+// -- Run trigger -------------------------------------------------------
+
+document.getElementById("run-btn").addEventListener("click", async () => {
+  const runStatus = document.getElementById("run-status");
+  const flag = document.getElementById("run-flag-select").value;
+  const gateOff = document.getElementById("run-gate-off").checked;
+  const llm = document.getElementById("run-llm-select").value || null;
+  if (!flag) { runStatus.textContent = "pick a flag first"; return; }
+
+  runStatus.textContent = `launching ${flag}...`;
+  document.getElementById("run-btn").disabled = true;
+  try {
+    const resp = await fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flag, gate_off: gateOff, llm, ...envPayload() }),
+    });
+    const body = await resp.json();
+    if (!resp.ok) throw new Error(body.error || ("HTTP " + resp.status));
+    runStatus.textContent = `running (run_id=${body.run_id}) -- watch below, up to 3 min`;
+    // auto-select this run in the events filter once it shows up
+    const tryFocus = setInterval(() => {
+      const filterEl = document.getElementById("run-filter");
+      if ([...filterEl.options].some(o => o.value === body.run_id)) {
+        filterEl.value = body.run_id;
+        render();
+        clearInterval(tryFocus);
+      }
+    }, 1000);
+    setTimeout(() => clearInterval(tryFocus), 30000);
+  } catch (e) {
+    runStatus.textContent = "failed: " + e.message;
+  } finally {
+    document.getElementById("run-btn").disabled = false;
+  }
+});
+
+loadEnvFromStorage();
+fetchFlags();
+fetchEvents();
+setupAutoRefresh();
+</script>
+</body>
+</html>
