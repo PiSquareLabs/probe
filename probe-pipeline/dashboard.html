@@ -15,11 +15,23 @@
     --harness: #90a4ae; --grader: #f06292; --writer: #a1887f;
   }
   @media (prefers-color-scheme: light) {
-    :root {
+    :root:not([data-theme="dark"]) {
       --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef0f4; --raised: #e6e9ef;
       --border: #dbdfe6; --border-soft: #e7eaef; --text: #1a1d24; --dim: #5b6472; --dim-2: #93a0af;
       --good: #2f9e57; --bad: #d63b49; --on-good-text: #ffffff;
     }
+  }
+  /* Explicit override via the header toggle -- takes precedence over the
+     OS-level prefers-color-scheme media query either direction. */
+  :root[data-theme="light"] {
+    --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef0f4; --raised: #e6e9ef;
+    --border: #dbdfe6; --border-soft: #e7eaef; --text: #1a1d24; --dim: #5b6472; --dim-2: #93a0af;
+    --good: #2f9e57; --bad: #d63b49; --on-good-text: #ffffff;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e14; --panel: #12161f; --panel-2: #10141b; --raised: #171c27;
+    --border: #232838; --border-soft: #1b202c; --text: #e9ecf2; --dim: #8b93a6; --dim-2: #5b6479;
+    --good: #6bcf8f; --bad: #ef5f6b; --on-good-text: #0b0e14;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; }
@@ -176,6 +188,10 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
         <span class="switch on" id="auto-refresh-switch"><span class="switch-knob"></span></span>
         Auto-refresh
+      </button>
+      <button class="icon-btn" id="theme-toggle-btn" aria-label="Switch theme" title="Switch theme">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="theme-icon-dark"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="theme-icon-light" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
       </button>
     </div>
   </div>
@@ -870,6 +886,36 @@ document.getElementById("run-btn").addEventListener("click", async () => {
   }
 });
 
+// -- Theme toggle (light/dark) ------------------------------------------
+// Persisted separately from the settings-panel storage key since it's a
+// display preference, not a run-launch credential.
+
+const THEME_STORAGE_KEY = "probe_dashboard_theme_v1";
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.getElementById("theme-icon-dark").style.display = theme === "dark" ? "block" : "none";
+  document.getElementById("theme-icon-light").style.display = theme === "light" ? "block" : "none";
+}
+
+function loadTheme() {
+  let theme;
+  try {
+    theme = localStorage.getItem(THEME_STORAGE_KEY);
+  } catch { /* storage blocked -- fall through to OS preference below */ }
+  if (theme !== "light" && theme !== "dark") {
+    theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  applyTheme(theme);
+}
+
+document.getElementById("theme-toggle-btn").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* private window / storage blocked -- theme just won't persist */ }
+});
+
+loadTheme();
 loadEnvFromStorage();
 fetchFlags();
 fetchEvents();
