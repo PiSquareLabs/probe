@@ -96,7 +96,7 @@ class Remediator:
               AND signature.loudest_service == ?loudest
               AND signature.dependency      == ?dependency
             | RENAME _id AS id
-            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before
+            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before, fault_class, service
             | LIMIT 3
         """
         return es_client.esql(
@@ -137,7 +137,7 @@ class Remediator:
             | EVAL rank = _score - (failed_reuses * 0.1)
             | SORT rank DESC
             | RENAME _id AS id
-            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score
+            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score, fault_class, service
             | LIMIT 3
         """
         params = {
