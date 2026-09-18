@@ -206,6 +206,7 @@ class Correlator:
         remediator_output: RemediatorOutput,
         symptom: str,
     ) -> tuple[Diagnosis, dict]:
+        es_client.set_stage("correlator")
         if remediator_output.path != "memory_miss":
             raise ValueError(
                 f"Correlator runs on memory_miss only (got path={remediator_output.path!r})"

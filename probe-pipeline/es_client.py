@@ -11,11 +11,53 @@ Elasticsearch by default, override via ES_URL / ES_API_KEY / ES_USERNAME
 from __future__ import annotations
 
 import base64
+import contextvars
 import json
 import os
+import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from pathlib import Path
+
+import pipeline_log as plog
+
+# Which pipeline stage is issuing the next query -- set by whichever
+# stage-level code (Remediator/Correlator) wraps its own query calls in
+# `with es_client.stage("remediator"):`, so esql()/search() below can
+# attribute the query they log to the right place in the dashboard's
+# step-by-step view without every call site having to pass it explicitly.
+_CURRENT_STAGE: contextvars.ContextVar[str] = contextvars.ContextVar("es_client_stage", default="unknown")
+
+
+@contextmanager
+def stage(name: str):
+    token = _CURRENT_STAGE.set(name)
+    try:
+        yield
+    finally:
+        _CURRENT_STAGE.reset(token)
+
+
+def set_stage(name: str) -> None:
+    """Non-context-manager form: set and leave set, for call sites (like
+    Remediator.remediate()/Correlator.correlate()'s own top-level methods)
+    where wrapping the whole method body in `with stage(...):` would mean
+    re-indenting a large existing function. Each stage's own entry point
+    sets it once at the top; the next stage's entry point sets it again
+    before its own queries run, so there's no cross-stage leakage in the
+    single-threaded, one-incident-at-a-time flow every caller here uses."""
+    _CURRENT_STAGE.set(name)
+
+
+def _log_query(kind: str, query_text: str, params: dict | None, elapsed_ms: float,
+                row_count: int | None = None, error: str | None = None) -> None:
+    # Full query text, not truncated -- this is exactly what the
+    # dashboard's "detailed log and executed query" request needs to
+    # show, and ES|QL statements here are short enough (a few lines)
+    # that there's no real size concern logging them in full.
+    plog.emit(_CURRENT_STAGE.get(), "query", query_kind=kind, query=query_text.strip(),
+               params=params, elapsed_ms=round(elapsed_ms, 1), row_count=row_count, error=error)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
@@ -76,13 +118,20 @@ def esql(query: str, params: dict | None = None) -> list[dict]:
         headers={"Content-Type": "application/json", "Authorization": _auth_header()},
         method="POST",
     )
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        raise EsqlError(f"ES|QL request failed ({e.code}): {e.read().decode()}") from e
+        elapsed = (time.monotonic() - started) * 1000
+        error_body = e.read().decode()
+        _log_query("esql", query, params, elapsed, error=f"HTTP {e.code}: {error_body[:300]}")
+        raise EsqlError(f"ES|QL request failed ({e.code}): {error_body}") from e
+    elapsed = (time.monotonic() - started) * 1000
     columns = [c["name"] for c in result["columns"]]
-    return [dict(zip(columns, row)) for row in result["values"]]
+    rows = [dict(zip(columns, row)) for row in result["values"]]
+    _log_query("esql", query, params, elapsed, row_count=len(rows))
+    return rows
 
 
 def get_doc(index: str, doc_id: str) -> dict | None:
@@ -94,13 +143,20 @@ def get_doc(index: str, doc_id: str) -> dict | None:
         headers={"Authorization": _auth_header()},
         method="GET",
     )
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())["_source"]
+            source = json.loads(resp.read())["_source"]
+        _log_query("get_doc", f"GET {index}/_doc/{doc_id}", None, (time.monotonic() - started) * 1000, row_count=1)
+        return source
     except urllib.error.HTTPError as e:
+        elapsed = (time.monotonic() - started) * 1000
         if e.code == 404:
+            _log_query("get_doc", f"GET {index}/_doc/{doc_id}", None, elapsed, row_count=0)
             return None
-        raise EsqlError(f"GET {index}/_doc/{doc_id} failed ({e.code}): {e.read().decode()}") from e
+        error_body = e.read().decode()
+        _log_query("get_doc", f"GET {index}/_doc/{doc_id}", None, elapsed, error=f"HTTP {e.code}: {error_body[:300]}")
+        raise EsqlError(f"GET {index}/_doc/{doc_id} failed ({e.code}): {error_body}") from e
 
 
 def index_doc(index: str, doc_id: str, body: dict) -> None:
@@ -153,8 +209,16 @@ def search(index: str, body: dict) -> dict:
         headers={"Content-Type": "application/json", "Authorization": _auth_header()},
         method="POST",
     )
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read())
+            result = json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        raise EsqlError(f"_search request failed ({e.code}): {e.read().decode()}") from e
+        elapsed = (time.monotonic() - started) * 1000
+        error_body = e.read().decode()
+        _log_query("search", json.dumps(body), {"index": index}, elapsed, error=f"HTTP {e.code}: {error_body[:300]}")
+        raise EsqlError(f"_search request failed ({e.code}): {error_body}") from e
+    elapsed = (time.monotonic() - started) * 1000
+    hit_count = len(result.get("hits", {}).get("hits", []))
+    _log_query("search", json.dumps(body), {"index": index}, elapsed, row_count=hit_count)
+    return result

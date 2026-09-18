@@ -118,6 +118,12 @@
   .verdict.wrong { background: var(--error); color: #fff; }
   .verdict.abstained { background: var(--dim); color: #0f1115; }
   .no-steps { color: var(--dim); padding: 20px; text-align: center; }
+  .query-block {
+    background: color-mix(in srgb, var(--bg) 60%, var(--panel)); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto;
+  }
+  .step-card .k code { font-size: 11px; }
   #raw-log-panel summary { cursor: pointer; color: var(--dim); font-size: 13px; }
 </style>
 </head>
@@ -333,6 +339,11 @@ function renderSteps(events) {
 }
 
 function stepHeadline(e) {
+  if (e.event === "query") {
+    const kindLabel = { esql: "ES|QL", search: "_search", get_doc: "doc lookup" }[e.query_kind] || e.query_kind;
+    if (e.error) return `${kindLabel} query FAILED (${Math.round(e.elapsed_ms)}ms)`;
+    return `ran a ${kindLabel} query -- ${e.row_count ?? 0} row(s) in ${Math.round(e.elapsed_ms)}ms`;
+  }
   switch (e.stage) {
     case "detector":
       return e.n_candidates > 0
@@ -360,6 +371,13 @@ function stepDetail(e) {
   const rows = [];
   const row = (label, value) => { if (value !== undefined && value !== null) rows.push(`<div><span class="k">${label}:</span> ${value}</div>`); };
 
+  if (e.event === "query") {
+    if (e.params && Object.keys(e.params).length) row("params", `<code>${escapeHtml(JSON.stringify(e.params))}</code>`);
+    if (e.error) rows.push(`<div><span class="verdict wrong">ERROR</span> ${escapeHtml(e.error)}</div>`);
+    rows.push(`<pre class="query-block">${escapeHtml(e.query || "")}</pre>`);
+    return rows.join("");
+  }
+
   if (e.stage === "detector") {
     row("loudest service", e.loudest);
   } else if (e.stage === "gate") {
@@ -383,6 +401,12 @@ function stepDetail(e) {
     row("correct in top 3", e.correct_at3);
   }
   return rows.join("") || fieldsToText(e);
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
 }
 
 function fieldsToText(e) {

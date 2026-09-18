@@ -217,6 +217,7 @@ class Remediator:
     # -- entry point -----------------------------------------------------
 
     def remediate(self, decision: Decision, fingerprint: Fingerprint, symptom: str) -> RemediatorOutput:
+        es_client.set_stage("remediator")
         if decision.kind != "incident":
             raise ValueError(
                 f"Remediator runs on every incident, never on watch/transient (got kind={decision.kind!r})"
