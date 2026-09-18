@@ -21,6 +21,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 START_LOCAL_ENV = REPO_ROOT / "opentelemetry-demo" / "elastic-start-local" / ".env"
 ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 
+# Same field/value mismatch probe-two-tier-detector-v3/change_point.py
+# already found and fixed (see that file's own comment): local
+# self-hosted Elasticsearch maps OTel span-kind to `span.kind` with
+# values like "SERVER"/"CLIENT"; this project's Elastic Cloud
+# Serverless project maps it to a field literally called `kind`, with
+# Title-case values ("Server", "Client"). correlator.py's own CLIENT-span
+# query had the same hardcoded span.kind == "CLIENT" bug, undiscovered
+# until reused here -- both now read these same two env vars, plus this
+# one for the CLIENT-specific value change_point.py doesn't need.
+SPAN_KIND_FIELD = os.environ.get("SPAN_KIND_FIELD", "span.kind")
+SPAN_KIND_SERVER_VALUE = os.environ.get("SPAN_KIND_SERVER_VALUE", "SERVER")
+SPAN_KIND_CLIENT_VALUE = os.environ.get("SPAN_KIND_CLIENT_VALUE", "CLIENT")
+
 
 def _local_password() -> str:
     for line in START_LOCAL_ENV.read_text().splitlines():
