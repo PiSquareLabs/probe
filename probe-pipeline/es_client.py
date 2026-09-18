@@ -83,7 +83,12 @@ def get_doc(index: str, doc_id: str) -> dict | None:
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())["_source"]
+            # `id` isn't a mapped field -- it's the document's _id, a
+            # metadata value Elasticsearch never returns inside _source.
+            # Every caller (remediator.py, grader.py, writer.py) treats
+            # runbook dicts as having an "id" key, so it's injected here,
+            # the one place a doc is fetched by id directly.
+            return json.loads(resp.read())["_source"] | {"id": doc_id}
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return None

@@ -79,14 +79,19 @@ class Remediator:
 
     @staticmethod
     def _stage0_exact(fp: Fingerprint) -> list[dict]:
+        # `id` is not a mapped field -- it's the document's _id, exposed
+        # in ES|QL only via the METADATA clause on FROM. RENAME makes it
+        # a plain `id` column so KEEP/downstream code doesn't need to
+        # know the metadata name.
         query = """
-            FROM probe-memory
+            FROM probe-memory METADATA _id
             | WHERE kind == "runbook"
               AND status != "demoted"
               AND signature.change_point    == ?change_point
               AND signature.metric          == ?metric
               AND signature.loudest_service == ?loudest
               AND signature.dependency      == ?dependency
+            | RENAME _id AS id
             | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before
             | LIMIT 3
         """
@@ -103,7 +108,7 @@ class Remediator:
     @staticmethod
     def _stage1_hybrid(fp: Fingerprint, symptom: str) -> list[dict]:
         query = """
-            FROM probe-memory
+            FROM probe-memory METADATA _id, _score
             | WHERE kind == "runbook" AND status != "demoted"
             | FORK
                 ( WHERE MATCH(semantic, ?symptom) | SORT _score DESC | LIMIT 10 )
@@ -114,6 +119,7 @@ class Remediator:
             | FUSE
             | EVAL rank = _score - (failed_reuses * 0.1)
             | SORT rank DESC
+            | RENAME _id AS id
             | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score
             | LIMIT 3
         """
@@ -129,6 +135,20 @@ class Remediator:
             # FORK/FUSE unavailable on this ES version -- RRF retriever
             # fallback over the same two queries (tool 2's documented
             # fallback).
+            # A `None` fingerprint field (fp.dependency is null until the
+            # Correlator's deepest-span query has run -- contract §0) must
+            # be omitted, not sent as a literal `null` term query: this
+            # Elasticsearch version rejects that outright rather than
+            # treating it as "never matches".
+            should_terms = [
+                {"term": {field: value}}
+                for field, value in (
+                    ("signature.change_point", fp.change_point),
+                    ("signature.loudest_service", fp.loudest_service),
+                    ("signature.dependency", fp.dependency),
+                )
+                if value is not None
+            ]
             body = {
                 "retriever": {
                     "rrf": {
@@ -140,11 +160,7 @@ class Remediator:
                                         "bool": {
                                             "filter": [{"term": {"kind": "runbook"}}],
                                             "must_not": [{"term": {"status": "demoted"}}],
-                                            "should": [
-                                                {"term": {"signature.change_point": fp.change_point}},
-                                                {"term": {"signature.loudest_service": fp.loudest_service}},
-                                                {"term": {"signature.dependency": fp.dependency}},
-                                            ],
+                                            "should": should_terms,
                                         }
                                     }
                                 }
@@ -155,7 +171,10 @@ class Remediator:
                 "size": 3,
             }
             result = es_client.search("probe-memory", body)
-            return [hit["_source"] | {"_score": hit["_score"]} for hit in result["hits"]["hits"]]
+            return [
+                hit["_source"] | {"id": hit["_id"], "_score": hit["_score"]}
+                for hit in result["hits"]["hits"]
+            ]
 
     @staticmethod
     def _ruled_out(symptom: str) -> list[RuledOut]:
