@@ -96,7 +96,7 @@ class Remediator:
               AND signature.loudest_service == ?loudest
               AND signature.dependency      == ?dependency
             | RENAME _id AS id
-            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before
+            | KEEP id, status, occurrences, failed_reuses, root_cause, steps, symptoms, ruled_out_before, fault_class, service
             | LIMIT 3
         """
         return es_client.esql(
@@ -117,8 +117,15 @@ class Remediator:
         # exact same problem as _id: `SORT _score` inside a FORK branch
         # fails with "Unknown column [_score]" unless it's requested via
         # METADATA too -- found live, same crash pattern as the _id bug.
+        #
+        # _index is a THIRD metadata column needed here: FUSE's default
+        # row-matching key is `_index`, and without requesting it via
+        # METADATA the command fails outright with "FUSE requires a key
+        # column, default [_index] column not found" -- found live, same
+        # root cause class as the two bugs above (ES|QL only exposes
+        # document metadata columns that were explicitly asked for).
         query = """
-            FROM probe-memory METADATA _id, _score
+            FROM probe-memory METADATA _id, _index, _score
             | WHERE kind == "runbook" AND status != "demoted"
             | FORK
                 ( WHERE MATCH(semantic, ?symptom) | SORT _score DESC | LIMIT 10 )
@@ -130,7 +137,7 @@ class Remediator:
             | EVAL rank = _score - (failed_reuses * 0.1)
             | SORT rank DESC
             | RENAME _id AS id
-            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score
+            | KEEP id, status, occurrences, root_cause, steps, symptoms, ruled_out_before, _score, fault_class, service
             | LIMIT 3
         """
         params = {
@@ -224,6 +231,7 @@ class Remediator:
     # -- entry point -----------------------------------------------------
 
     def remediate(self, decision: Decision, fingerprint: Fingerprint, symptom: str) -> RemediatorOutput:
+        es_client.set_stage("remediator")
         if decision.kind != "incident":
             raise ValueError(
                 f"Remediator runs on every incident, never on watch/transient (got kind={decision.kind!r})"

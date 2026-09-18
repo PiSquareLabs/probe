@@ -41,6 +41,7 @@ import gate
 import grader
 import remediator
 import writer
+import pipeline_log as plog
 from schemas import Decision, Fingerprint
 
 POLL_INTERVAL = 12
@@ -138,6 +139,9 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
     print(f"  candidates considered: {[c.get('id') for c in rem_out.candidates]}")
     if rem_out.ruled_out:
         print(f"  ruled_out: {[(r.proposed_fault_class, r.proposed_service) for r in rem_out.ruled_out]}")
+    plog.emit("remediator", rem_out.path, candidates_found=len(rem_out.candidates),
+               confirm_match=rem_out.confirm.get("match"), confirm_confidence=rem_out.confirm.get("confidence"),
+               **{f"{k}_ms": v for k, v in rem_out.timings_ms.items()})
 
     if rem_out.path == "memory_miss":
         diagnosis, evidence = correlator_instance.correlate(decision, raw, rem_out, symptom)
@@ -147,6 +151,8 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         print(f"\n  diagnosis candidates: {[(c.fault_class, c.service, c.confidence) for c in diagnosis.candidates]}")
         print(f"  root_cause: {diagnosis.root_cause}")
         print(f"  steps: {diagnosis.steps}")
+        plog.emit("correlator", "diagnosis", fault_class=diagnosis.top1.fault_class,
+                   service=diagnosis.top1.service, confidence=diagnosis.top1.confidence)
     else:
         rb = rem_out.runbook
         from schemas import Diagnosis, DiagnosisCandidate
@@ -156,6 +162,7 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         )
         print(f"\nMemory hit -- runbook is the diagnosis:")
         print(f"  {rb['fault_class']}/{rb['service']}: {rb.get('root_cause')}")
+        plog.emit("remediator", "memory_hit_diagnosis", fault_class=rb["fault_class"], service=rb["service"])
 
     if truth_flag:
         truth = catalog_runbook.read_by_flag(truth_flag)
@@ -165,10 +172,14 @@ def handle_incident(decision, raw, remediator_instance, correlator_instance, tru
         probe_run = grader.grade_incident(diagnosis, rem_out, truth.fault_class, truth.service)
         print(f"\nGrader: correct_at1={probe_run.correct_at1}  correct_at3={probe_run.correct_at3}  "
               f"abstained={probe_run.abstained}  (truth={truth.fault_class}/{truth.service})")
+        plog.emit("grader", "graded", correct_at1=probe_run.correct_at1, correct_at3=probe_run.correct_at3,
+                   abstained=probe_run.abstained, truth_fault_class=truth.fault_class, truth_service=truth.service)
 
         w = writer.Writer(remediator_instance)
         write_result = w.write(probe_run, diagnosis, fingerprint, incident_id=f"watch_{int(time.time())}", symptom=symptom)
         print(f"Writer: {write_result}")
+        plog.emit("writer", write_result.get("action", "wrote") if isinstance(write_result, dict) else "wrote",
+                   **(write_result if isinstance(write_result, dict) else {}))
     else:
         print("\n(no --flag given -- skipping Grader/Writer, nothing graded or written)")
 
