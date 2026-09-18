@@ -156,12 +156,23 @@ def _score_signal(rows: list[dict], value_field: str, signal: str,
 def zscore_scan(streak_state: dict, verbose: bool = False,
                  bucket_seconds: int = BUCKET_SECONDS,
                  lookback_minutes: int = LOOKBACK_MINUTES,
-                 min_spans_per_bucket: int = MIN_SPANS_PER_BUCKET) -> list[dict]:
+                 min_spans_per_bucket: int = MIN_SPANS_PER_BUCKET,
+                 min_error_count: int = MIN_ERROR_COUNT) -> list[dict]:
     """Run all 5 signals, return every (service, signal) pair whose z-score
     has cleared THRESHOLD for PERSISTENCE consecutive calls with this same
     streak_state dict. Pass a fresh {} to disable persistence across calls
     (each candidate then needs PERSISTENCE=1 to ever shout -- set that
-    explicitly if you want single-scan behavior for comparison)."""
+    explicitly if you want single-scan behavior for comparison).
+
+    min_error_count was previously only a _score_signal() default, not
+    reachable from here -- found live while testing adFailure (~10%
+    error rate) against modest traffic: the C4 floor (>=5 raw errors in
+    the recent 30s window) never cleared, since 10% of ~10 req/10s-bucket
+    is under 1 error per bucket. Threading it through lets a caller lower
+    it for exactly this situation -- a real signal thinner than the
+    floor's original noise-suppression target -- without editing this
+    file's own module-level default, which stays correctly conservative.
+    """
     scans = [
         (error_rate_by_service(lookback_minutes, bucket_seconds, min_spans_per_bucket),
          "error_rate", "error_rate", "fail_count"),
@@ -176,7 +187,8 @@ def zscore_scan(streak_state: dict, verbose: bool = False,
     for query, value_field, signal, count_field in scans:
         try:
             rows = esql_rows(query)
-            candidates += _score_signal(rows, value_field, signal, streak_state, count_field)
+            candidates += _score_signal(rows, value_field, signal, streak_state, count_field,
+                                         min_error_count=min_error_count)
         except Exception as e:
             if verbose:
                 print(f"  [zscore_scan] {signal} failed: {e}")

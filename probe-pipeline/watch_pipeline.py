@@ -20,6 +20,11 @@ Usage:
                                                         # and write to probe-memory
     python watch_pipeline.py --continuous              # keep watching after each incident,
                                                         # instead of exiting after the first
+    python watch_pipeline.py --skip-gate                # bypass Gate entirely -- react to any
+                                                        # tier=2 candidate immediately, no
+                                                        # sustained/intermittent persistence
+                                                        # wait. TESTING ONLY -- see main()'s
+                                                        # warning when this is passed.
 """
 import argparse
 import sys
@@ -35,7 +40,7 @@ import gate
 import grader
 import remediator
 import writer
-from schemas import Fingerprint
+from schemas import Decision, Fingerprint
 
 POLL_INTERVAL = 12
 
@@ -102,10 +107,25 @@ def main():
     ap.add_argument("--use-openai", action="store_true")
     ap.add_argument("--continuous", action="store_true", help="keep watching after handling an incident, instead of exiting")
     ap.add_argument("--min-spans-per-bucket", type=int, default=None)
+    ap.add_argument("--min-error-count", type=int, default=None,
+                     help="override zscore_scan.py's MIN_ERROR_COUNT (default 5) -- for a real but "
+                          "thin error signal (e.g. ~10%% of modest traffic) that never accumulates "
+                          "5 raw errors in the recent 30s window even though it's genuinely elevated")
+    ap.add_argument("--skip-gate", action="store_true",
+                     help="TESTING ONLY: bypass gate.py entirely. Any tier=2 candidate is treated "
+                          "as an immediate incident, no sustained/intermittent persistence check. "
+                          "This is not how the real pipeline behaves -- a real deployment must go "
+                          "through the Gate's rules (contract #2) to avoid opening incidents on "
+                          "noise. Use this only to exercise Remediator/Correlator against real "
+                          "tier=2 signals that Gate's persistence rules keep missing the timing on.")
     args = ap.parse_args()
 
     if not args.use_openai:
         print("WARNING: --use-openai not passed -- expect path=memory_miss and fault_class='unknown' always.\n")
+    if args.skip_gate:
+        print("WARNING: --skip-gate passed -- Gate's sustained/intermittent rules are bypassed "
+              "entirely. Any tier=2 candidate fires immediately, including ones Gate would "
+              "correctly classify as noise. Testing only.\n")
 
     confirm_fn = reasoning_fn = None
     if args.use_openai:
@@ -116,7 +136,11 @@ def main():
     gate_instance = gate.Gate()
     remediator_instance = remediator.Remediator(confirm_fn=confirm_fn) if confirm_fn else remediator.Remediator()
     correlator_instance = correlator.Correlator(reasoning_fn=reasoning_fn) if reasoning_fn else correlator.Correlator()
-    detector_kwargs = {"min_spans_per_bucket": args.min_spans_per_bucket} if args.min_spans_per_bucket else {}
+    detector_kwargs = {}
+    if args.min_spans_per_bucket:
+        detector_kwargs["min_spans_per_bucket"] = args.min_spans_per_bucket
+    if args.min_error_count is not None:
+        detector_kwargs["min_error_count"] = args.min_error_count
 
     # If --flag is given, only react to an incident that actually
     # touches that flag's target service (per catalog/<flag>.yaml) --
@@ -141,7 +165,11 @@ def main():
         while deadline is None or time.time() < deadline:
             raw = detector_bridge.scan(streak_state, **detector_kwargs)
             if raw:
-                decision = gate_instance.evaluate(raw)
+                if args.skip_gate:
+                    tier2 = [c for c in raw["candidates"] if c.tier == 2]
+                    decision = Decision(kind="incident", pattern="sustained", trigger=tier2) if tier2 else Decision(kind="watch", pattern=None, trigger=[])
+                else:
+                    decision = gate_instance.evaluate(raw)
                 if decision.kind == "incident":
                     touches_expected = expect_service is None or any(c.service == expect_service for c in decision.trigger)
                     if not touches_expected:
