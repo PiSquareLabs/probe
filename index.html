@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PROBE — Collective Operational Memory for Software Vendors</title>
+<meta name="description" content="PROBE is a privacy-safe collective operational memory (the HIVE) that learns incident→fix patterns across a vendor's entire deployment fleet, so the 500th site never rediscovers a problem already solved at the first." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c63d5'/%3E%3Ctext x='16' y='23' font-size='20' font-family='system-ui' font-weight='700' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#0b0e14;
+    --bg-alt:#10141d;
+    --panel:#141924;
+    --panel-2:#181f2d;
+    --border:#232b3a;
+    --text:#e7ebf3;
+    --text-dim:#9aa5b8;
+    --text-faint:#5e6a80;
+    --accent:#4f8cff;
+    --accent-2:#7ee0c0;
+    --accent-3:#f2b84b;
+    --danger:#ff6b6b;
+    --radius:14px;
+    --max:1120px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f6f7fb;
+      --bg-alt:#ffffff;
+      --panel:#ffffff;
+      --panel-2:#f0f2f8;
+      --border:#e2e6ef;
+      --text:#161b26;
+      --text-dim:#4b5568;
+      --text-faint:#8b95a8;
+      --accent:#2f66e0;
+      --accent-2:#0f9d7c;
+      --accent-3:#b5790a;
+      --danger:#d13d3d;
+    }
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  code, .mono{
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .wrap{max-width:var(--max); margin:0 auto; padding:0 24px;}
+  header.top{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter:blur(10px);
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom:1px solid var(--border);
+  }
+  .navbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 0;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight:700; font-size:16px; letter-spacing:0.02em;
+  }
+  .brand .dot{
+    width:11px; height:11px; border-radius:3px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow:0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  nav.links{display:flex; gap:22px; font-size:14px;}
+  nav.links a{color:var(--text-dim);}
+  nav.links a:hover{color:var(--text); text-decoration:none;}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; padding:5px 10px; border-radius:99px;
+    border:1px solid var(--border); color:var(--text-dim);
+    background:var(--panel);
+  }
+
+  /* HERO */
+  .hero{padding:88px 0 64px; text-align:center; position:relative; overflow:hidden;}
+  .hero::before{
+    content:""; position:absolute; inset:-40% -10% auto -10%; height:520px;
+    background:radial-gradient(closest-side, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+    pointer-events:none;
+  }
+  .hero h1{
+    font-size:clamp(34px, 6vw, 58px);
+    margin:18px 0 14px;
+    letter-spacing:-0.02em;
+    font-weight:800;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(100deg, var(--accent), var(--accent-2) 60%, var(--accent-3));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p.lede{
+    max-width:760px; margin:0 auto; font-size:19px; color:var(--text-dim);
+  }
+  .hero .ctas{
+    display:flex; gap:14px; justify-content:center; margin-top:32px; flex-wrap:wrap;
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:12px 22px; border-radius:10px; font-weight:600; font-size:15px;
+    border:1px solid var(--border); cursor:pointer;
+  }
+  .btn.primary{
+    background:linear-gradient(100deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--accent-2)));
+    color:white; border:none;
+  }
+  .btn.primary:hover{filter:brightness(1.08); text-decoration:none;}
+  .btn.ghost{background:var(--panel); color:var(--text);}
+  .btn.ghost:hover{background:var(--panel-2); text-decoration:none;}
+
+  section{padding:64px 0;}
+  section.alt{background:var(--bg-alt); border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .eyebrow{
+    text-transform:uppercase; letter-spacing:0.12em; font-size:12px;
+    color:var(--accent); font-weight:700; margin-bottom:10px;
+  }
+  h2{font-size:clamp(24px,3.4vw,34px); margin:0 0 14px; letter-spacing:-0.01em;}
+  .section-lede{color:var(--text-dim); max-width:760px; font-size:16px; margin-bottom:36px;}
+
+  /* PROBLEM GRID */
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:18px;}
+  @media (max-width:860px){ .grid-3{grid-template-columns:1fr;} .grid-2{grid-template-columns:1fr;} }
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:24px;
+  }
+  .card h3{margin:0 0 8px; font-size:17px;}
+  .card p{margin:0; color:var(--text-dim); font-size:14.5px;}
+  .stat-num{font-size:30px; font-weight:800; color:var(--accent);}
+
+  /* how it works pipeline */
+  .pipeline{
+    display:flex; flex-wrap:wrap; gap:0; align-items:stretch;
+    counter-reset:step;
+  }
+  .pipe-step{
+    flex:1 1 200px; background:var(--panel); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; position:relative; margin:8px;
+    counter-increment:step;
+  }
+  .pipe-step::before{
+    content:counter(step);
+    position:absolute; top:-10px; left:16px;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--accent); color:white; font-weight:700; font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 4px var(--bg-alt);
+  }
+  .pipe-step h4{margin:10px 0 8px; font-size:15px;}
+  .pipe-step p{margin:0; font-size:13.5px; color:var(--text-dim);}
+  .pipe-arrow{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-faint); font-size:20px; padding:0 2px;
+  }
+  @media (max-width:900px){ .pipe-arrow{ transform:rotate(90deg); } }
+
+  /* boundary diagram */
+  .boundary{
+    display:flex; align-items:center; gap:0; border:1px dashed var(--border);
+    border-radius:var(--radius); overflow:hidden; margin-top:28px;
+  }
+  .boundary .side{flex:1; padding:26px; position:relative;}
+  .boundary .side.private{background:color-mix(in srgb, var(--danger) 8%, var(--panel));}
+  .boundary .side.shared{background:color-mix(in srgb, var(--accent-2) 8%, var(--panel));}
+  .boundary .divider{
+    width:2px; align-self:stretch;
+    background:repeating-linear-gradient(var(--border), var(--border) 6px, transparent 6px, transparent 12px);
+  }
+  .boundary .tag{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700;
+    margin-bottom:10px; display:block;
+  }
+  .boundary .side.private .tag{color:var(--danger);}
+  .boundary .side.shared .tag{color:var(--accent-2);}
+  .boundary ul{margin:0; padding-left:18px; font-size:14px; color:var(--text-dim);}
+  .boundary li{margin-bottom:4px;}
+
+  /* loop diagram */
+  .loop-wrap{position:relative;}
+  .loop-list{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:14px;
+  }
+  @media (max-width:980px){ .loop-list{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .loop-list{grid-template-columns:1fr;} }
+  .loop-item{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px; font-size:14px;
+  }
+  .loop-item .n{color:var(--accent-3); font-weight:800; font-size:13px; margin-bottom:6px; display:block;}
+  .loop-item p{margin:0; color:var(--text-dim); font-size:13.5px;}
+
+  /* modes */
+  .mode-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:28px;
+  }
+  .mode-card h3{margin-top:0; font-size:19px;}
+  .mode-card .tagline{color:var(--accent); font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;}
+  .mode-card ul{color:var(--text-dim); font-size:14px; padding-left:18px;}
+
+  /* stack */
+  .stack-cols{display:grid; grid-template-columns:1fr 1fr; gap:22px;}
+  @media (max-width:800px){ .stack-cols{grid-template-columns:1fr;} }
+  .stack-col{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:24px;}
+  .stack-col h3{margin-top:0; display:flex; align-items:center; gap:10px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+  .chip{
+    font-size:12.5px; padding:6px 11px; border-radius:99px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text-dim);
+  }
+  .elastic h3{color:var(--accent);}
+  .aws h3{color:var(--accent-3);}
+
+  /* tools table */
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th, td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--border);}
+  th{color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:11.5px; letter-spacing:0.06em;}
+  td code{background:var(--panel-2); padding:2px 6px; border-radius:5px; font-size:12.5px;}
+  .table-wrap{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:6px 12px; overflow-x:auto;}
+
+  /* repo map */
+  .repo-map{font-size:13.5px;}
+  .repo-map .path{color:var(--accent-2);}
+  .repo-map .desc{color:var(--text-dim);}
+  .repo-list{list-style:none; margin:0; padding:0; display:grid; gap:8px;}
+  .repo-list li{
+    display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px;
+  }
+
+  footer{padding:48px 0 64px; text-align:center; color:var(--text-faint); font-size:13.5px;}
+  footer a{color:var(--text-dim);}
+
+  ::selection{background:color-mix(in srgb, var(--accent) 40%, transparent);}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap navbar">
+    <div class="brand"><span class="dot"></span> PROBE</div>
+    <nav class="links">
+      <a href="#problem">Problem</a>
+      <a href="#how">How it works</a>
+      <a href="#loop">The loop</a>
+      <a href="#modes">Modes</a>
+      <a href="#stack">Stack</a>
+      <a href="#repo">Repo</a>
+    </nav>
+    <span class="badge">Forge the Future 2026 · Elastic × AWS</span>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="badge">Collective operational memory for software vendors</span>
+    <h1>The 500th site should never<br/><span class="grad">rediscover a bug the 1st already fixed.</span></h1>
+    <p class="lede">
+      PROBE is a shared "HIVE" that learns incident → fix patterns across a vendor's
+      entire deployment fleet — without ever moving a customer's raw logs. Sanitized
+      fingerprints go in; ranked, validated remediations come back, straight into Jira.
+    </p>
+    <div class="ctas">
+      <a class="btn primary" href="#how">See how it works</a>
+      <a class="btn ghost" href="https://github.com/PiSquareLabs/probe" target="_blank" rel="noopener">View the repo</a>
+      <a class="btn ghost" href="README.md">Read the README</a>
+    </div>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2>One product. Hundreds of isolated deployments.</h2>
+    <p class="section-lede">
+      A vendor ships one product — an HMS, an ERP, a GitLab-style platform — into hundreds
+      of on-prem or regulated customer environments. Each deployment breaks alone. Logs
+      are siloed and often can't leave the customer's boundary for privacy or security
+      reasons. So the <em>same incident</em> gets re-diagnosed from scratch at Site A,
+      then B, then C — and support cost and MTTR grow linearly with fleet size, while
+      hard-won fixes never travel between sites.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Fleet, not single tenant</h3>
+        <p>Healthcare (Bahmni, Aarogya), financial and government vendors run the same
+        software across hundreds of regulated, walled-off environments.</p>
+      </div>
+      <div class="card">
+        <h3>Logs can't travel</h3>
+        <p>Raw logs carry PII — Aadhaar numbers, health IDs, patient records — and
+        privacy/compliance rules mean they usually cannot leave the deployment.</p>
+      </div>
+      <div class="card">
+        <h3>Knowledge doesn't travel either</h3>
+        <p>Without raw logs to compare, nothing carries the fix from one site's incident
+        to the next site's identical one. L2/L3 support relearns it every time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>Sanitize the incident down to a fingerprint — never the raw logs.</h2>
+    <p class="section-lede">
+      Because every deployment runs the <strong>same software</strong>, the fields that
+      make cross-deployment matching possible — service names, error classes, versions,
+      fault taxonomy — are exactly the fields that carry no PII. That means the
+      sanitization boundary and the matching boundary are the same line: stripping the
+      private stuff costs almost nothing in match quality.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <h4>Raw incident</h4>
+        <p>Logs, traces and errors stay inside the customer's deployment boundary — they
+        never cross out.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <h4>Elastic ML categorization</h4>
+        <p>Strips variable tokens (IDs, timestamps, hostnames) down to a symptom
+        skeleton — the shape of the error, not its specifics.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <h4>Amazon Comprehend redaction</h4>
+        <p>Catches residual PII in the skeleton — Aadhaar numbers, health IDs, anything
+        the categorizer missed.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <h4>Fingerprint crosses in</h4>
+        <p>Only this derived, client-agnostic fingerprint enters the HIVE — a shared
+        Elasticsearch index — nothing else does.</p>
+      </div>
+    </div>
+
+    <div class="boundary">
+      <div class="side private">
+        <span class="tag">Stays in the deployment</span>
+        <ul>
+          <li>Raw log lines and stack traces</li>
+          <li>Patient / customer identifiers</li>
+          <li>Hostnames, IPs, tenant-specific config</li>
+          <li>Anything that identifies <em>who</em> hit the bug</li>
+        </ul>
+      </div>
+      <div class="divider"></div>
+      <div class="side shared">
+        <span class="tag">Crosses into the HIVE</span>
+        <ul>
+          <li>Service name, error class, fault taxonomy</li>
+          <li>Product version + date window</li>
+          <li>Symptom skeleton (categorized, redacted)</li>
+          <li>Exactly the fields that make matching work</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="loop">
+  <div class="wrap">
+    <div class="eyebrow">The loop</div>
+    <h2>Jira is the UI and the state machine.</h2>
+    <p class="section-lede">
+      No custom workflow engine. An anomaly becomes a ticket; the ticket carries the
+      fingerprint; the agent does the searching and posts its reasoning as a comment;
+      a human validates; the HIVE gets smarter for the next incident.
+    </p>
+    <div class="loop-list">
+      <div class="loop-item">
+        <span class="n">01 · Detect</span>
+        <p>Anomaly detected on a deployment → a Jira ticket is created, carrying the
+        sanitized fingerprint.</p>
+      </div>
+      <div class="loop-item">
+        <span class="n">02 · Match</span>
+        <p>The agent searches the HIVE for prior incidents with the same symptom
+        skeleton across the whole fleet.</p>
+      </div>
+      <div class="loop-item">
+        <span class="n">03 · Suggest</span>
+        <p>Posts ranked remediations + runbooks + a confidence score + <em>why it
+        matched</em> as a Jira comment.</p>
+      </div>
+      <div class="loop-item">
+        <span class="n">04 · Validate</span>
+        <p>The engineer pings back with new info, corrects the agent, or confirms —
+        the ticket moves to COMPLETE.</p>
+      </div>
+      <div class="loop-item">
+        <span class="n">05 · Learn</span>
+        <p>The agent creates or updates a runbook, linked to the anomaly, incident,
+        remediation, ticket and author. The hive gets smarter.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="eyebrow">Blast radius</div>
+    <h2>Tying an error back to the change that likely caused it.</h2>
+    <p class="section-lede">
+      Jira tickets and GitHub PRs/commits sync in via native Elastic connectors. Each
+      product version carries a date window, so when a deployment on that version
+      errors, the changes shipped in that window become the prime suspects — linking
+      an incident straight back to the PR that likely introduced it.
+    </p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Version-scoped suspects</h3>
+        <p>Instead of searching the whole commit history, the agent narrows to the
+        commits and PRs that shipped inside the affected version's window.</p>
+      </div>
+      <div class="card">
+        <h3>Native connectors, no scraping</h3>
+        <p>GitHub and Jira sync into Elasticsearch through Elastic's own connectors —
+        one more thing PROBE doesn't have to rebuild.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="modes">
+  <div class="wrap">
+    <div class="eyebrow">Two modes, one contract</div>
+    <h2>The HIVE is a store plus a set of MCP tools.</h2>
+    <p class="section-lede">
+      <code>match_incident</code>, <code>get_resolution</code>, <code>blast_radius</code>,
+      <code>fleet_signal</code>, <code>check_version_risk</code>, <code>submit_outcome</code>,
+      <code>upsert_runbook</code> — the same seven tools serve two different SKUs.
+    </p>
+    <div class="grid-2">
+      <div class="mode-card">
+        <div class="tagline">Mode 1 · Bring your own agent</div>
+        <h3>Import the HIVE as an MCP tool</h3>
+        <ul>
+          <li>Vendor brings their own Agent Builder + LLM</li>
+          <li>Best reasoning quality, fits their existing agent stack</li>
+          <li>Best privacy posture — the vendor's own model, the vendor's own policies</li>
+          <li>PROBE is infrastructure they plug into, not a product they adopt wholesale</li>
+        </ul>
+      </div>
+      <div class="mode-card">
+        <div class="tagline">Mode 2 · Managed agent</div>
+        <h3>One <code>diagnose()</code> call</h3>
+        <ul>
+          <li>We run the agent; the vendor calls a single turnkey endpoint</li>
+          <li>More generic, faster to adopt, no agent stack required on their side</li>
+          <li>Same seven MCP tools underneath — same HIVE, same fingerprint contract</li>
+          <li>Right fit for a vendor without existing agent infrastructure</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:28px;">
+      <table>
+        <thead>
+          <tr><th>Tool</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>match_incident</code></td><td>Find prior HIVE incidents with a matching symptom skeleton</td></tr>
+          <tr><td><code>get_resolution</code></td><td>Fetch the validated fix/runbook for a matched incident</td></tr>
+          <tr><td><code>blast_radius</code></td><td>Find the PRs/commits in a version's date window that likely caused it</td></tr>
+          <tr><td><code>fleet_signal</code></td><td>Check whether other deployments are seeing the same symptom right now</td></tr>
+          <tr><td><code>check_version_risk</code></td><td>Score a version by its known incident history before rollout</td></tr>
+          <tr><td><code>submit_outcome</code></td><td>Record whether a suggested fix actually worked — the feedback loop</td></tr>
+          <tr><td><code>upsert_runbook</code></td><td>Create or update the runbook a validated fix gets linked to</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="stack">
+  <div class="wrap">
+    <div class="eyebrow">Stack</div>
+    <h2>Elastic is the brain. AWS is edge, privacy and reasoning.</h2>
+    <p class="section-lede">
+      The custom build is small and deliberate on purpose: an orchestrator service, two
+      UI screens, and the discipline of never rebuilding what Elastic already does well.
+    </p>
+    <div class="stack-cols">
+      <div class="stack-col elastic">
+        <h3>🔍 Elastic</h3>
+        <p style="color:var(--text-dim); font-size:14px; margin:0;">
+          ML anomaly detection, categorization, retrieval and the agent runtime.
+        </p>
+        <div class="chip-row">
+          <span class="chip">ML anomaly detection</span>
+          <span class="chip">CATEGORIZE</span>
+          <span class="chip">ES|QL</span>
+          <span class="chip">ELSER + hybrid RRF</span>
+          <span class="chip">Agent Builder</span>
+          <span class="chip">Workflows</span>
+          <span class="chip">MCP server</span>
+          <span class="chip">Kibana</span>
+        </div>
+      </div>
+      <div class="stack-col aws">
+        <h3>☁️ AWS</h3>
+        <p style="color:var(--text-dim); font-size:14px; margin:0;">
+          Edge transport, privacy redaction, and the reasoning model.
+        </p>
+        <div class="chip-row">
+          <span class="chip">Bedrock (Claude)</span>
+          <span class="chip">Comprehend (PII redaction)</span>
+          <span class="chip">IoT Core</span>
+          <span class="chip">Greengrass</span>
+          <span class="chip">AgentCore</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:22px;">
+      <div class="card">
+        <div class="stat-num">~$0.10</div>
+        <h3>per incident</h3>
+        <p>And falling as the hive learns — later matches need less reasoning, not more.</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">Suggestion</div>
+        <h3>only, human-in-the-loop</h3>
+        <p>The agent proposes with a confidence score and its reasoning. A human
+        validates before anything is marked COMPLETE.</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">1</div>
+        <h3>line: sanitize = match</h3>
+        <p>The fields PII-free enough to leave the deployment are exactly the fields
+        that make cross-fleet matching work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="repo">
+  <div class="wrap">
+    <div class="eyebrow">In this repository</div>
+    <h2>What's actually built here today</h2>
+    <p class="section-lede">
+      This repo currently implements two concrete stages of the PROBE pipeline end to
+      end — the <strong>Detector</strong> (finds the anomaly) and the
+      <strong>Remediator</strong> (files the Jira ticket once a cause is known) — plus
+      the supporting Elastic ML and pipeline work behind the HIVE vision above.
+    </p>
+    <ul class="repo-list repo-map">
+      <li><span class="path">backend/ + frontend/</span><span class="desc">Remediator — FastAPI + React app that provisions Elastic↔Jira connectors and files tickets. See <a href="README.md">README.md</a>.</span></li>
+      <li><span class="path">DETECTORS.md</span><span class="desc">Master index of seven independent anomaly-detection methods, compared</span></li>
+      <li><span class="path">probe-detector/, probe-two-tier-detector*/</span><span class="desc">Z-score + change-point detector implementations (Tiers 1 & 2)</span></li>
+      <li><span class="path">elastic-ml-anomaly-detection/</span><span class="desc">Elastic's built-in ML anomaly jobs applied to the demo fleet</span></li>
+      <li><span class="path">ml-flag-detection/</span><span class="desc">Supervised classifier baseline over aggregated telemetry windows</span></li>
+      <li><span class="path">causal-changepoint-detection/</span><span class="desc">Unsupervised ES|QL CHANGE_POINT + call-graph ranking</span></li>
+      <li><span class="path">probe-pipeline/</span><span class="desc">End-to-end pipeline wiring detectors into the ticket flow</span></li>
+      <li><span class="path">docs/ARCHITECTURE.md</span><span class="desc">Remediator's detailed component design and request routing</span></li>
+      <li><span class="path">RUNNING_LOCALLY.md / RUNNING_ON_ELASTIC_CLOUD.md</span><span class="desc">Step-by-step setup for the demo fleet + detectors</span></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Built for <strong>Forge the Future 2026</strong> (Elastic × AWS).
+    <br/>
+    <a href="README.md">README</a> · <a href="DETECTORS.md">Detectors</a> · <a href="docs/ARCHITECTURE.md">Architecture</a>
+  </div>
+</footer>
+
+</body>
+</html>

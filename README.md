@@ -1,4 +1,42 @@
-# Probe
+# PROBE
+
+**A privacy-safe collective operational memory for software vendors.**
+
+A vendor ships one product — an HMS, an ERP, a GitLab-style platform — into
+hundreds of isolated, often regulated customer deployments. Each one breaks
+alone; logs are siloed and usually can't be shared outside the deployment for
+privacy/compliance reasons, so the same incident gets re-diagnosed from
+scratch at Site A, then B, then C. PROBE is the shared "HIVE" that stops
+that: it learns incident→fix patterns across a vendor's whole fleet — from
+sanitized fingerprints, **never raw logs** — so the 500th site never
+rediscovers a problem the 1st already solved.
+
+👉 **[Open the landing page](index.html)** for the full architecture,
+the sanitization/matching boundary, the Jira-driven detect→match→suggest→
+validate→learn loop, the two deployment modes, and the Elastic+AWS stack.
+
+Built for **Forge the Future 2026** (Elastic × AWS).
+
+## What's in this repo today
+
+This repo implements two concrete stages of that pipeline end to end:
+
+- **Detector** — seven independent anomaly-detection methods (z-score,
+  change-point, Elastic ML jobs, a supervised classifier, and combinations
+  of them) validated against a live OpenTelemetry demo fleet. Start at
+  [`DETECTORS.md`](DETECTORS.md).
+- **Remediator** — the FastAPI + React app below, which files the Jira
+  ticket once a root cause is known. This is the rest of this README.
+
+No Correlator (the LLM-via-Bedrock reasoning stage that ranks a detector's
+candidates and drives the HIVE match/suggest loop) or shared HIVE index
+exists in this repo yet — `causal-changepoint-detection/`'s heuristic
+ranking is the current stand-in for it. See [`DETECTORS.md`](DETECTORS.md)
+for the honest state of each piece.
+
+---
+
+## Remediator: configure Jira from your own UI, not from Kibana
 
 Configure Elasticsearch's Jira integrations from your own UI, not from Kibana.
 
